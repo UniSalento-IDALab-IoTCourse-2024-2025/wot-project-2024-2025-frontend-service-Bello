@@ -1,0 +1,40 @@
+stages:
+  - build
+  - deploy
+
+build_image:
+  stage: build
+  image: node:22.14.0
+  before_script:
+    - npm install
+  script:
+    - echo "Running build..."
+    - npx tsc -b
+    - npx vite build
+    - echo "Build complete. Directory contents:"
+    - ls -la
+    - echo "Checking dist directory:"
+    - ls -la dist || echo "No dist directory found"
+  artifacts:
+    paths:
+      - dist/
+    expire_in: 1 hour
+
+deploy:
+  stage: deploy
+  image: node:22.14.0
+  before_script:
+    - chmod 600 $AWS_SECRET_ACCESS_KEY
+    - pwd
+    - ls -la
+  script:
+    - scp -o StrictHostKeyChecking=no -i $AWS_SECRET_ACCESS_KEY docker-compose.prod.yml ubuntu@51.21.23.52:/home/ubuntu
+    - scp -o StrictHostKeyChecking=no -i $AWS_SECRET_ACCESS_KEY Dockerfile.prod ubuntu@51.21.23.52:/home/ubuntu
+    - scp -o StrictHostKeyChecking=no -i $AWS_SECRET_ACCESS_KEY nginx.conf ubuntu@51.21.23.52:/home/ubuntu
+    - scp -o StrictHostKeyChecking=no -i $AWS_SECRET_ACCESS_KEY -r dist ubuntu@51.21.23.52:/home/ubuntu
+    - ssh -o StrictHostKeyChecking=no -i $AWS_SECRET_ACCESS_KEY ubuntu@51.21.23.52 "
+        cd /home/ubuntu &&
+        sudo docker compose -f docker-compose.prod.yml down &&
+        sudo docker compose -f docker-compose.prod.yml up -d --build"
+  needs:
+    - build_image

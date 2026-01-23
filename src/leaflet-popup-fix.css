@@ -1,0 +1,34 @@
+/* Assicura che i popup Leaflet abbiano un z-index più alto */
+.leaflet-popup {
+    z-index: 1000 !important;
+  }
+  
+  /* Stile dark theme per i popup */
+  .leaflet-popup-content-wrapper, 
+  .leaflet-popup-tip {
+    z-index: 1000 !important;
+    background-color: #1f2937 !important; /* Sfondo scuro */
+    color: white !important; /* Testo bianco */
+  }
+  
+  /* Stile per i link nei popup */
+  .leaflet-popup-content a {
+    color: #3b82f6 !important; /* Blu più chiaro per i link */
+  }
+  
+  /* Stile per i bottoni nei popup */
+  .leaflet-popup-content button {
+    background-color: #3b82f6 !important;
+    color: white !important;
+  }
+  
+  /* Assicura che i popup mantengano un buon posizionamento */
+  .leaflet-container {
+    z-index: 0;
+  }
+  
+  /* Assicura che i marcatori siano sempre visibili */
+  .leaflet-marker-icon, 
+  .leaflet-marker-shadow {
+    z-index: 600 !important;
+  }
