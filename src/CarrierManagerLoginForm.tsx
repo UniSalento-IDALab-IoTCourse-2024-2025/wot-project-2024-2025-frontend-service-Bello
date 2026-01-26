@@ -35,7 +35,15 @@ export default function CarrierManagerLoginForm({ onLogin }: CarrierManagerLogin
         return;
       }
 
-      onLogin(responseData.jwt);
+      // Extract JWT from the new ApiResponseDTO format
+      const jwt = responseData.body?.jwt || responseData.body;
+      
+      if (!jwt) {
+        alert("Authentication failed: No token received");
+        return;
+      }
+
+      onLogin(jwt);
       localStorage.setItem("email", email);
       navigate("/add-vehicle");
 

@@ -2,6 +2,8 @@ import { useState, useEffect } from "react";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import Header from "./Header";
 import AddVehicle from "./AddVehicle";
+import VehicleList from "./VehicleList";
+import TripList from "./TripList";
 import Dashboard from "./Dashboard";
 import CarrierManagerLoginForm from "./CarrierManagerLoginForm";
 import SendParcel from "./SendParcel";
@@ -42,6 +44,8 @@ export default function App() {
           <Route path="/add-vehicle" element={<AddVehicle />} />
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/send-parcel" element={<SendParcel />} />
+          <Route path="/vehicle-list" element={<VehicleList />} />
+          <Route path="/trip-list" element={<TripList />} />
         </Routes>
       </div>
     </Router>

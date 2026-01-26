@@ -46,6 +46,12 @@ export default function Header({ isLoggedIn, onLogout }: HeaderProps) {
                     <a href="/add-vehicle" className="text-center text-sm md:text-base px-3 py-2 bg-yellow-600 text-white rounded hover:bg-yellow-700 transition-colors duration-200 shadow-md flex-1 md:flex-none">
                       Add vehicle
                     </a>
+                    <a href="/vehicle-list" className="text-center text-sm md:text-base px-3 py-2 bg-yellow-600 text-white rounded hover:bg-yellow-700 transition-colors duration-200 shadow-md flex-1 md:flex-none">
+                      Vehicle List
+                    </a>
+                    <a href="/trip-list" className="text-center text-sm md:text-base px-3 py-2 bg-yellow-600 text-white rounded hover:bg-yellow-700 transition-colors duration-200 shadow-md flex-1 md:flex-none">
+                      Trip List
+                    </a>
                     <a href="/dashboard" className="text-center text-sm md:text-base px-3 py-2 bg-yellow-600 text-white rounded hover:bg-yellow-700 transition-colors duration-200 shadow-md flex-1 md:flex-none">
                       Dashboard
                     </a>

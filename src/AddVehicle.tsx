@@ -27,6 +27,7 @@ const AddVehicle: React.FC = () => {
       maxWeight: parseInt(maxWeight),
       pricePerKm: parseFloat(pricePerKm)
     };
+
     try {
       setIsLoading(true);
       
@@ -47,7 +48,8 @@ const AddVehicle: React.FC = () => {
         return;
       }
       
-      alert('Vehicle added successfully!');
+      alert(responseData.message || 'Vehicle added successfully!');
+      
       // Reset form
       setVehicleName('');
       setLength('');
@@ -90,8 +92,8 @@ const AddVehicle: React.FC = () => {
             <input
               type="number"
               id="length"
-              placeholder="0"
-              step="1"
+              placeholder="0.00"
+              step="0.01"
               min="0"
               value={length}
               onChange={(e) => setLength(e.target.value)}
@@ -106,8 +108,8 @@ const AddVehicle: React.FC = () => {
             <input
               type="number"
               id="width"
-              placeholder="0"
-              step="1"
+              placeholder="0.00"
+              step="0.01"
               min="0"
               value={width}
               onChange={(e) => setWidth(e.target.value)}
@@ -122,8 +124,8 @@ const AddVehicle: React.FC = () => {
             <input
               type="number"
               id="height"
-              placeholder="0"
-              step="1"
+              placeholder="0.00"
+              step="0.01"
               min="0"
               value={height}
               onChange={(e) => setHeight(e.target.value)}
@@ -139,8 +141,8 @@ const AddVehicle: React.FC = () => {
           <input
             type="number"
             id="maxWeight"
-            placeholder="0"
-            step="1"
+            placeholder="0.00"
+            step="0.01"
             min="0"
             value={maxWeight}
             onChange={(e) => setMaxWeight(e.target.value)}
