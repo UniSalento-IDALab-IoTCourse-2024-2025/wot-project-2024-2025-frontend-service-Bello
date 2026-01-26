@@ -37,7 +37,7 @@ export default function CarrierManagerLoginForm({ onLogin }: CarrierManagerLogin
 
       onLogin(responseData.jwt);
       localStorage.setItem("email", email);
-      navigate("/admin-check-gains");
+      navigate("/add-vehicle");
 
     } catch (err) {
       console.error(err);

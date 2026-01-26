@@ -2,7 +2,9 @@ import { useState, useEffect } from "react";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import Header from "./Header";
 import AddVehicle from "./AddVehicle";
+import Dashboard from "./Dashboard";
 import CarrierManagerLoginForm from "./CarrierManagerLoginForm";
+import SendParcel from "./SendParcel";
 import HomePage from "./HomePage"; 
 
 export default function App() {
@@ -37,7 +39,9 @@ export default function App() {
         <Routes>
           <Route path="/" element={<HomePage />} />
           <Route path="/login-carrier-manager" element={<CarrierManagerLoginForm onLogin={handleLoginCarrierManager} />} />
-          <Route path="/admin-check-gains" element={<AddVehicle />} />
+          <Route path="/add-vehicle" element={<AddVehicle />} />
+          <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/send-parcel" element={<SendParcel />} />
         </Routes>
       </div>
     </Router>
