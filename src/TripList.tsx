@@ -1,4 +1,11 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
+
+// Declare google maps types
+declare global {
+  interface Window {
+    google: any;
+  }
+}
 
 interface TripDTO {
   id: string;
@@ -9,6 +16,8 @@ interface TripDTO {
   scheduled: boolean;
   arrivalDate: string;
   price: number;
+  departureLatLng: { lat: number; lng: number };
+  arrivalLatLng: { lat: number; lng: number };
 }
 
 interface ShipmentDTO {
@@ -22,18 +31,39 @@ interface ShipmentDTO {
   length: number;
   refrigerated: boolean;
   arrivalDate: string;
+  departureLatLng: { lat: number; lng: number };
+  arrivalLatLng: { lat: number; lng: number };
 }
+
+// Opzioni mappa semplificata - senza controlli non necessari
+const mapOptions = {
+  mapTypeId: 'roadmap',
+  streetViewControl: false,      // Disabilita Street View
+  mapTypeControl: false,         // Disabilita cambio tipo mappa (Satellite, ecc.)
+  fullscreenControl: false,      // Disabilita fullscreen
+  zoomControl: true,             // Mantieni zoom
+  scaleControl: true,            // Mantieni scala
+  rotateControl: false,          // Disabilita rotazione
+  panControl: false,             // Disabilita pan control
+  gestureHandling: 'cooperative' // Migliore gestione gesti su mobile
+};
 
 const TripList: React.FC = () => {
   const [trips, setTrips] = useState<TripDTO[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [selectedTrip, setSelectedTrip] = useState<TripDTO | null>(null);
+  const [selectedTripForDelete, setSelectedTripForDelete] = useState<TripDTO | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showMapPopup, setShowMapPopup] = useState(false);
-  const [selectedPolyline, setSelectedPolyline] = useState('');
-  const [showShipmentsPopup, setShowShipmentsPopup] = useState(false);
+  const [selectedTripForMap, setSelectedTripForMap] = useState<TripDTO | null>(null);
+  const tripMapRef = useRef<HTMLDivElement>(null);
+  const [expandedTripIndex, setExpandedTripIndex] = useState<number | null>(null);
   const [shipments, setShipments] = useState<ShipmentDTO[]>([]);
   const [loadingShipments, setLoadingShipments] = useState(false);
+  const [showShipmentMapPopup, setShowShipmentMapPopup] = useState(false);
+  const [selectedShipment, setSelectedShipment] = useState<ShipmentDTO | null>(null);
+  const [currentTripPolyline, setCurrentTripPolyline] = useState('');
+  const mapRef = useRef<HTMLDivElement>(null);
+  const googleMapInstance = useRef<any>(null);
 
   useEffect(() => {
     fetchTrips();
@@ -58,6 +88,7 @@ const TripList: React.FC = () => {
         return;
       }
 
+      console.log('Trips received:', responseData.body);
       setTrips(responseData.body || []);
     } catch (err) {
       console.error(err);
@@ -67,15 +98,121 @@ const TripList: React.FC = () => {
     }
   };
 
-  const handleShowMap = (polyline: string) => {
-    setSelectedPolyline(polyline);
+  const handleShowMap = (trip: TripDTO) => {
+    console.log('Selected trip for map:', trip);
+    
+    setSelectedTripForMap(trip);
     setShowMapPopup(true);
+    
+    // Wait for the modal to render, then initialize the map
+    setTimeout(() => {
+      initializeTripMap(trip);
+    }, 100);
   };
 
-  const handleShowShipments = async (trip: TripDTO) => {
+  const initializeTripMap = (trip: TripDTO) => {
+    if (!tripMapRef.current || !window.google) {
+      console.error('Map initialization failed - missing ref or Google Maps');
+      return;
+    }
+
+    // Check if coordinates are available
+    if (!trip.departureLatLng || !trip.arrivalLatLng) {
+      console.error('Missing coordinates for trip', trip);
+      return;
+    }
+
+    // Center map between departure and arrival
+    const centerLat = (trip.departureLatLng.lat + trip.arrivalLatLng.lat) / 2;
+    const centerLng = (trip.departureLatLng.lng + trip.arrivalLatLng.lng) / 2;
+
+    const map = new google.maps.Map(tripMapRef.current, {
+      center: { lat: centerLat, lng: centerLng },
+      zoom: 8,
+      ...mapOptions
+    });
+
+    // Decode and draw the polyline
+    if (trip.pathPolyline) {
+      const decodedPath = google.maps.geometry.encoding.decodePath(trip.pathPolyline);
+      
+      new google.maps.Polyline({
+        path: decodedPath,
+        geodesic: true,
+        strokeColor: '#2563eb',
+        strokeOpacity: 0.8,
+        strokeWeight: 4,
+        map: map
+      });
+
+      // Fit map to polyline bounds
+      const bounds = new google.maps.LatLngBounds();
+      decodedPath.forEach((point: any) => bounds.extend(point));
+      
+      // Extend bounds to include markers
+      bounds.extend(new google.maps.LatLng(trip.departureLatLng.lat, trip.departureLatLng.lng));
+      bounds.extend(new google.maps.LatLng(trip.arrivalLatLng.lat, trip.arrivalLatLng.lng));
+      
+      map.fitBounds(bounds);
+    }
+
+    // Add departure marker (green)
+    new google.maps.Marker({
+      position: { lat: trip.departureLatLng.lat, lng: trip.departureLatLng.lng },
+      map: map,
+      title: 'Departure',
+      icon: {
+        path: google.maps.SymbolPath.CIRCLE,
+        scale: 12,
+        fillColor: '#22c55e',
+        fillOpacity: 1,
+        strokeColor: '#ffffff',
+        strokeWeight: 2
+      },
+      label: {
+        text: 'D',
+        color: '#ffffff',
+        fontSize: '12px',
+        fontWeight: 'bold'
+      }
+    });
+
+    // Add arrival marker (red)
+    new google.maps.Marker({
+      position: { lat: trip.arrivalLatLng.lat, lng: trip.arrivalLatLng.lng },
+      map: map,
+      title: 'Arrival',
+      icon: {
+        path: google.maps.SymbolPath.CIRCLE,
+        scale: 12,
+        fillColor: '#ef4444',
+        fillOpacity: 1,
+        strokeColor: '#ffffff',
+        strokeWeight: 2
+      },
+      label: {
+        text: 'A',
+        color: '#ffffff',
+        fontSize: '12px',
+        fontWeight: 'bold'
+      }
+    });
+  };
+
+  const handleShowShipments = async (trip: TripDTO, index: number) => {
+    // If clicking on the same trip, toggle it closed
+    if (expandedTripIndex === index) {
+      setExpandedTripIndex(null);
+      setShipments([]);
+      return;
+    }
+
+    // Expand this trip and load its shipments
+    setExpandedTripIndex(index);
+    setCurrentTripPolyline(trip.pathPolyline);
+
     try {
       setLoadingShipments(true);
-      setShowShipmentsPopup(true);
       
       const token = localStorage.getItem('jwt');
       const tripDTO = {
@@ -99,7 +236,7 @@ const TripList: React.FC = () => {
 
       if (!response.ok) {
         alert(responseData.message || 'Failed to fetch shipments');
-        setShowShipmentsPopup(false);
+        setExpandedTripIndex(null);
         return;
       }
 
@@ -107,30 +244,179 @@ const TripList: React.FC = () => {
     } catch (err) {
       console.error(err);
       alert('Failed to fetch shipments');
-      setShowShipmentsPopup(false);
+      setExpandedTripIndex(null);
     } finally {
       setLoadingShipments(false);
     }
   };
 
+  const handleDeleteShipment = async (shipment: ShipmentDTO) => {
+    if (!confirm(`Are you sure you want to delete this shipment?`)) {
+      return;
+    }
+
+    try {
+      setLoadingShipments(true);
+      const token = localStorage.getItem('jwt');
+
+      const shipmentDTO = {
+        vehicleName: shipment.vehicleName,
+        departureAddress: shipment.departureAddress,
+        arrivalAddress: shipment.arrivalAddress,
+        weight: shipment.weight,
+        width: shipment.width,
+        height: shipment.height,
+        length: shipment.length,
+        refrigerated: shipment.refrigerated,
+        arrivalDate: shipment.arrivalDate
+      };
+
+      const response = await fetch('http://localhost:8081/api/carrier/deleteShipment', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(shipmentDTO)
+      });
+
+      const responseData = await response.json();
+
+      if (!response.ok) {
+        alert(responseData.message || 'Failed to delete shipment');
+        return;
+      }
+
+      alert(responseData.message || 'Shipment deleted successfully!');
+      
+      // Remove the deleted shipment from the list
+      setShipments(prevShipments => 
+        prevShipments.filter(s => s.id !== shipment.id)
+      );
+    } catch (err) {
+      console.error(err);
+      alert('Failed to delete shipment');
+    } finally {
+      setLoadingShipments(false);
+    }
+  };
+
+  const handleShowShipmentMap = (shipment: ShipmentDTO) => {
+    setSelectedShipment(shipment);
+    setShowShipmentMapPopup(true);
+    
+    // Wait for the modal to render, then initialize the map
+    setTimeout(() => {
+      initializeMap(shipment);
+    }, 100);
+  };
+
+  const initializeMap = (shipment: ShipmentDTO) => {
+    if (!mapRef.current || !window.google) return;
+
+    // Check if coordinates are available
+    if (!shipment.departureLatLng || !shipment.arrivalLatLng) {
+      console.error('Missing coordinates for shipment', shipment);
+      return;
+    }
+
+    // Center map between departure and arrival
+    const centerLat = (shipment.departureLatLng.lat + shipment.arrivalLatLng.lat) / 2;
+    const centerLng = (shipment.departureLatLng.lng + shipment.arrivalLatLng.lng) / 2;
+
+    const map = new google.maps.Map(mapRef.current, {
+      center: { lat: centerLat, lng: centerLng },
+      zoom: 8,
+      ...mapOptions
+    });
+
+    googleMapInstance.current = map;
+
+    // Decode and draw the polyline
+    if (currentTripPolyline) {
+      const decodedPath = google.maps.geometry.encoding.decodePath(currentTripPolyline);
+      
+      new google.maps.Polyline({
+        path: decodedPath,
+        geodesic: true,
+        strokeColor: '#2563eb',
+        strokeOpacity: 0.8,
+        strokeWeight: 4,
+        map: map
+      });
+
+      // Fit map to polyline bounds
+      const bounds = new google.maps.LatLngBounds();
+      decodedPath.forEach((point: any) => bounds.extend(point));
+      
+      // Extend bounds to include markers
+      bounds.extend(new google.maps.LatLng(shipment.departureLatLng.lat, shipment.departureLatLng.lng));
+      bounds.extend(new google.maps.LatLng(shipment.arrivalLatLng.lat, shipment.arrivalLatLng.lng));
+      
+      map.fitBounds(bounds);
+    }
+
+    // Add departure marker (green)
+    new google.maps.Marker({
+      position: { lat: shipment.departureLatLng.lat, lng: shipment.departureLatLng.lng },
+      map: map,
+      title: 'Departure',
+      icon: {
+        path: google.maps.SymbolPath.CIRCLE,
+        scale: 10,
+        fillColor: '#22c55e',
+        fillOpacity: 1,
+        strokeColor: '#ffffff',
+        strokeWeight: 2
+      },
+      label: {
+        text: 'D',
+        color: '#ffffff',
+        fontSize: '12px',
+        fontWeight: 'bold'
+      }
+    });
+
+    // Add arrival marker (red)
+    new google.maps.Marker({
+      position: { lat: shipment.arrivalLatLng.lat, lng: shipment.arrivalLatLng.lng },
+      map: map,
+      title: 'Arrival',
+      icon: {
+        path: google.maps.SymbolPath.CIRCLE,
+        scale: 10,
+        fillColor: '#ef4444',
+        fillOpacity: 1,
+        strokeColor: '#ffffff',
+        strokeWeight: 2
+      },
+      label: {
+        text: 'A',
+        color: '#ffffff',
+        fontSize: '12px',
+        fontWeight: 'bold'
+      }
+    });
+  };
+
   const handleDeleteClick = (trip: TripDTO) => {
-    setSelectedTrip(trip);
+    setSelectedTripForDelete(trip);
     setShowDeleteConfirm(true);
   };
 
   const handleDeleteConfirm = async () => {
-    if (!selectedTrip) return;
+    if (!selectedTripForDelete) return;
 
     try {
       setIsLoading(true);
       const token = localStorage.getItem('jwt');
 
       const tripDTO = {
-        vehicleName: selectedTrip.vehicleName,
-        pathPolyline: selectedTrip.pathPolyline,
-        distanceKm: selectedTrip.distanceKm,
-        started: selectedTrip.started,
-        arrivalDate: selectedTrip.arrivalDate
+        vehicleName: selectedTripForDelete.vehicleName,
+        pathPolyline: selectedTripForDelete.pathPolyline,
+        distanceKm: selectedTripForDelete.distanceKm,
+        started: selectedTripForDelete.started,
+        arrivalDate: selectedTripForDelete.arrivalDate
       };
 
       const response = await fetch('http://localhost:8081/api/carrier/deleteTrip', {
@@ -151,7 +437,7 @@ const TripList: React.FC = () => {
 
       alert(responseData.message || 'Trip deleted successfully!');
       setShowDeleteConfirm(false);
-      setSelectedTrip(null);
+      setSelectedTripForDelete(null);
       
       fetchTrips();
     } catch (err) {
@@ -164,7 +450,7 @@ const TripList: React.FC = () => {
 
   const handleCancelDelete = () => {
     setShowDeleteConfirm(false);
-    setSelectedTrip(null);
+    setSelectedTripForDelete(null);
   };
 
   return (
@@ -190,87 +476,166 @@ const TripList: React.FC = () => {
         </div>
       ) : (
         <div className="space-y-4">
-          {trips.map((trip) => (
-            <div
-              key={trip.vehicleName}
-              className="bg-gray-800 rounded-lg p-6 border border-gray-700 hover:border-gray-600 transition-all cursor-pointer"
-              onClick={() => handleShowShipments(trip)}
-            >
-              <div className="flex justify-between items-start mb-4">
-                <div>
-                  <h2 className="text-xl font-bold text-white mb-2">{trip.vehicleName}</h2>
-                  <span className={`px-2 py-1 text-white text-xs rounded ${
-                    trip.started ? 'bg-green-600' : 'bg-gray-600'
-                  }`}>
-                    {trip.started ? 'Started' : 'Pending'}
-                  </span>
+          {trips.map((trip, index) => (
+            <div key={trip.id || `${trip.vehicleName}-${index}`} className="bg-gray-800 rounded-lg border border-gray-700">
+              <div
+                className="p-6 cursor-pointer hover:bg-gray-750 transition-colors"
+                onClick={() => handleShowShipments(trip, index)}
+              >
+                <div className="flex justify-between items-start mb-4">
+                  <div>
+                    <h2 className="text-xl font-bold text-white mb-2">{trip.vehicleName}</h2>
+                    <span className={`px-2 py-1 text-white text-xs rounded ${
+                      trip.started ? 'bg-green-600' : 'bg-gray-600'
+                    }`}>
+                      {trip.started ? 'Started' : 'Pending'}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                  <div>
+                    <p className="text-sm text-gray-400">Arrival Date</p>
+                    <p className="font-semibold">{trip.arrivalDate}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-400">Distance</p>
+                    <p className="font-semibold">{trip.distanceKm.toFixed(2)} km</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-400">Price</p>
+                    <p className="font-semibold">€{trip.price.toFixed(2)}</p>
+                  </div>
+                </div>
+
+                <div className="flex gap-4">
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleShowMap(trip);
+                    }}
+                    className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors duration-200"
+                  >
+                    View Route
+                  </button>
+                  <button
+                    disabled
+                    onClick={(e) => e.stopPropagation()}
+                    className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg opacity-50 cursor-not-allowed"
+                  >
+                    Start
+                  </button>
+                  <button
+                    disabled
+                    onClick={(e) => e.stopPropagation()}
+                    className="flex-1 px-4 py-2 bg-orange-600 text-white rounded-lg opacity-50 cursor-not-allowed"
+                  >
+                    Stop
+                  </button>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleDeleteClick(trip);
+                    }}
+                    className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors duration-200"
+                  >
+                    Delete Trip
+                  </button>
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-                <div>
-                  <p className="text-sm text-gray-400">Arrival Date</p>
-                  <p className="font-semibold">{trip.arrivalDate}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-gray-400">Distance</p>
-                  <p className="font-semibold">{trip.distanceKm.toFixed(2)} km</p>
-                </div>
-                <div>
-                  <p className="text-sm text-gray-400">Price</p>
-                  <p className="font-semibold">€{trip.price.toFixed(2)}</p>
-                </div>
-              </div>
+              {/* Expanded Shipments Section */}
+              {expandedTripIndex === index && (
+                <div className="border-t border-gray-700 p-6 bg-gray-850">
+                  <h3 className="text-lg font-bold mb-4">Shipments</h3>
+                  
+                  {loadingShipments ? (
+                    <div className="text-center py-8">
+                      <p className="text-gray-400">Loading shipments...</p>
+                    </div>
+                  ) : shipments.length === 0 ? (
+                    <div className="text-center py-8">
+                      <p className="text-gray-400">No shipments found for this trip.</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      {shipments.map((shipment) => (
+                        <div
+                          key={shipment.id}
+                          className="bg-gray-700 rounded-lg p-4 border border-gray-600"
+                        >
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-3">
+                            <div>
+                              <p className="text-sm text-gray-400">Departure</p>
+                              <p className="font-semibold text-sm">{shipment.departureAddress}</p>
+                            </div>
+                            <div>
+                              <p className="text-sm text-gray-400">Arrival</p>
+                              <p className="font-semibold text-sm">{shipment.arrivalAddress}</p>
+                            </div>
+                          </div>
 
-              <div className="flex gap-4">
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleShowMap(trip.pathPolyline);
-                  }}
-                  className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors duration-200"
-                >
-                  View Route
-                </button>
-                <button
-                  disabled
-                  onClick={(e) => e.stopPropagation()}
-                  className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg opacity-50 cursor-not-allowed"
-                >
-                  Start
-                </button>
-                <button
-                  disabled
-                  onClick={(e) => e.stopPropagation()}
-                  className="flex-1 px-4 py-2 bg-orange-600 text-white rounded-lg opacity-50 cursor-not-allowed"
-                >
-                  Stop
-                </button>
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleDeleteClick(trip);
-                  }}
-                  className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors duration-200"
-                >
-                  Delete Trip
-                </button>
-              </div>
+                          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-3">
+                            <div>
+                              <p className="text-sm text-gray-400">Dimensions</p>
+                              <p className="font-semibold text-sm">
+                                {shipment.length}×{shipment.width}×{shipment.height} cm
+                              </p>
+                            </div>
+                            <div>
+                              <p className="text-sm text-gray-400">Weight</p>
+                              <p className="font-semibold text-sm">{shipment.weight} kg</p>
+                            </div>
+                            <div>
+                              <p className="text-sm text-gray-400">Arrival Date</p>
+                              <p className="font-semibold text-sm">{shipment.arrivalDate}</p>
+                            </div>
+                            <div>
+                              <p className="text-sm text-gray-400">Refrigeration</p>
+                              <span className={`px-2 py-1 text-white text-xs rounded ${
+                                shipment.refrigerated ? 'bg-blue-600' : 'bg-gray-600'
+                              }`}>
+                                {shipment.refrigerated ? 'Yes' : 'No'}
+                              </span>
+                            </div>
+                          </div>
+
+                          <div className="flex gap-2">
+                            <button
+                              onClick={() => handleShowShipmentMap(shipment)}
+                              className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors duration-200"
+                            >
+                              View on Map
+                            </button>
+                            <button
+                              onClick={() => handleDeleteShipment(shipment)}
+                              disabled={loadingShipments}
+                              className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                              {loadingShipments ? 'Deleting...' : 'Delete Shipment'}
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           ))}
         </div>
       )}
 
-      {/* Shipments Popup */}
-      {showShipmentsPopup && (
+      {/* Shipment Map Popup */}
+      {showShipmentMapPopup && selectedShipment && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-gray-800 rounded-lg p-6 max-w-4xl w-full mx-4 max-h-[80vh] overflow-y-auto">
+          <div className="bg-gray-800 rounded-lg p-6 max-w-5xl w-full mx-4 max-h-[90vh] overflow-y-auto">
             <div className="flex justify-between items-center mb-4">
-              <h3 className="text-xl font-bold">Shipments for this Trip</h3>
+              <h3 className="text-xl font-bold">Shipment Route</h3>
               <button
                 onClick={() => {
-                  setShowShipmentsPopup(false);
-                  setShipments([]);
+                  setShowShipmentMapPopup(false);
+                  setSelectedShipment(null);
                 }}
                 className="text-gray-400 hover:text-white text-2xl"
               >
@@ -278,65 +643,40 @@ const TripList: React.FC = () => {
               </button>
             </div>
 
-            {loadingShipments ? (
-              <div className="text-center py-8">
-                <p className="text-gray-400">Loading shipments...</p>
+            <div className="mb-4 p-4 bg-gray-700 rounded-lg">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <p className="text-sm text-gray-400">Departure</p>
+                  <p className="font-semibold">{selectedShipment.departureAddress}</p>
+                  {selectedShipment.departureLatLng && (
+                    <p className="text-xs text-gray-400 mt-1">
+                      Lat: {selectedShipment.departureLatLng.lat.toFixed(6)}, 
+                      Lng: {selectedShipment.departureLatLng.lng.toFixed(6)}
+                    </p>
+                  )}
+                </div>
+                <div>
+                  <p className="text-sm text-gray-400">Arrival</p>
+                  <p className="font-semibold">{selectedShipment.arrivalAddress}</p>
+                  {selectedShipment.arrivalLatLng && (
+                    <p className="text-xs text-gray-400 mt-1">
+                      Lat: {selectedShipment.arrivalLatLng.lat.toFixed(6)}, 
+                      Lng: {selectedShipment.arrivalLatLng.lng.toFixed(6)}
+                    </p>
+                  )}
+                </div>
               </div>
-            ) : shipments.length === 0 ? (
-              <div className="text-center py-8">
-                <p className="text-gray-400">No shipments found for this trip.</p>
-              </div>
-            ) : (
-              <div className="space-y-4">
-                {shipments.map((shipment) => (
-                  <div
-                    key={shipment.id}
-                    className="bg-gray-700 rounded-lg p-4 border border-gray-600"
-                  >
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-3">
-                      <div>
-                        <p className="text-sm text-gray-400">Departure</p>
-                        <p className="font-semibold text-sm">{shipment.departureAddress}</p>
-                      </div>
-                      <div>
-                        <p className="text-sm text-gray-400">Arrival</p>
-                        <p className="font-semibold text-sm">{shipment.arrivalAddress}</p>
-                      </div>
-                    </div>
+            </div>
 
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                      <div>
-                        <p className="text-sm text-gray-400">Dimensions</p>
-                        <p className="font-semibold text-sm">
-                          {shipment.length}×{shipment.width}×{shipment.height} cm
-                        </p>
-                      </div>
-                      <div>
-                        <p className="text-sm text-gray-400">Weight</p>
-                        <p className="font-semibold text-sm">{shipment.weight} kg</p>
-                      </div>
-                      <div>
-                        <p className="text-sm text-gray-400">Arrival Date</p>
-                        <p className="font-semibold text-sm">{shipment.arrivalDate}</p>
-                      </div>
-                      <div>
-                        <p className="text-sm text-gray-400">Refrigeration</p>
-                        <span className={`px-2 py-1 text-white text-xs rounded ${
-                          shipment.refrigerated ? 'bg-blue-600' : 'bg-gray-600'
-                        }`}>
-                          {shipment.refrigerated ? 'Yes' : 'No'}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
+            <div 
+              ref={mapRef}
+              className="w-full h-96 bg-gray-700 rounded-lg"
+            />
 
             <button
               onClick={() => {
-                setShowShipmentsPopup(false);
-                setShipments([]);
+                setShowShipmentMapPopup(false);
+                setSelectedShipment(null);
               }}
               className="mt-4 w-full px-6 py-3 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors duration-200"
             >
@@ -347,29 +687,80 @@ const TripList: React.FC = () => {
       )}
 
       {/* Map Popup */}
-      {showMapPopup && (
+      {showMapPopup && selectedTripForMap && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-gray-800 rounded-lg p-6 max-w-3xl w-full mx-4">
+          <div className="bg-gray-800 rounded-lg p-6 max-w-5xl w-full mx-4 max-h-[90vh] overflow-y-auto">
             <div className="flex justify-between items-center mb-4">
-              <h3 className="text-xl font-bold">Route Map</h3>
+              <h3 className="text-xl font-bold">Route Map - {selectedTripForMap.vehicleName}</h3>
               <button
-                onClick={() => setShowMapPopup(false)}
+                onClick={() => {
+                  setShowMapPopup(false);
+                  setSelectedTripForMap(null);
+                }}
                 className="text-gray-400 hover:text-white text-2xl"
               >
                 ×
               </button>
             </div>
-            <div className="bg-gray-700 rounded-lg p-4 h-96 flex items-center justify-center">
-              <div className="text-center">
-                <p className="text-gray-400 mb-2">Polyline data:</p>
-                <p className="text-xs text-gray-500 break-all max-w-xl">{selectedPolyline}</p>
-                <p className="text-gray-400 mt-4">
-                  You can integrate a map library here (e.g., Google Maps, Leaflet)
-                </p>
+
+            <div className="mb-4 p-4 bg-gray-700 rounded-lg">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <p className="text-sm text-gray-400">Departure</p>
+                  {selectedTripForMap.departureLatLng && (
+                    <p className="text-sm text-white">
+                      Lat: {selectedTripForMap.departureLatLng.lat.toFixed(6)}, 
+                      Lng: {selectedTripForMap.departureLatLng.lng.toFixed(6)}
+                    </p>
+                  )}
+                </div>
+                <div>
+                  <p className="text-sm text-gray-400">Arrival</p>
+                  {selectedTripForMap.arrivalLatLng && (
+                    <p className="text-sm text-white">
+                      Lat: {selectedTripForMap.arrivalLatLng.lat.toFixed(6)}, 
+                      Lng: {selectedTripForMap.arrivalLatLng.lng.toFixed(6)}
+                    </p>
+                  )}
+                </div>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-3">
+                <div>
+                  <p className="text-sm text-gray-400">Distance</p>
+                  <p className="font-semibold">{selectedTripForMap.distanceKm.toFixed(2)} km</p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-400">Arrival Date</p>
+                  <p className="font-semibold">{selectedTripForMap.arrivalDate}</p>
+                </div>
               </div>
             </div>
+
+            <div className="flex gap-4 mb-4">
+              <div className="flex items-center gap-2">
+                <div className="w-4 h-4 rounded-full bg-green-500 border-2 border-white"></div>
+                <span className="text-sm text-gray-300">Departure</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-4 h-4 rounded-full bg-red-500 border-2 border-white"></div>
+                <span className="text-sm text-gray-300">Arrival</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-1 bg-blue-500 rounded"></div>
+                <span className="text-sm text-gray-300">Route</span>
+              </div>
+            </div>
+
+            <div 
+              ref={tripMapRef}
+              className="w-full h-96 bg-gray-700 rounded-lg"
+            />
+
             <button
-              onClick={() => setShowMapPopup(false)}
+              onClick={() => {
+                setShowMapPopup(false);
+                setSelectedTripForMap(null);
+              }}
               className="mt-4 w-full px-6 py-3 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors duration-200"
             >
               Close
@@ -379,12 +770,12 @@ const TripList: React.FC = () => {
       )}
 
       {/* Delete Confirmation Modal */}
-      {showDeleteConfirm && selectedTrip && (
+      {showDeleteConfirm && selectedTripForDelete && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-gray-800 rounded-lg p-6 max-w-md w-full mx-4">
             <h3 className="text-xl font-bold mb-4">Confirm Deletion</h3>
             <p className="text-gray-300 mb-6">
-              Are you sure you want to delete the trip for vehicle <strong>{selectedTrip.vehicleName}</strong>? This will also delete all related shipments. This action cannot be undone.
+              Are you sure you want to delete the trip for vehicle <strong>{selectedTripForDelete.vehicleName}</strong>? This will also delete all related shipments. This action cannot be undone.
             </p>
             <div className="flex gap-4">
               <button

@@ -1,4 +1,11 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
+
+// Declare google maps types
+declare global {
+  interface Window {
+    google: any;
+  }
+}
 
 interface TripDTO {
   vehicleName: string;
@@ -7,24 +14,32 @@ interface TripDTO {
   alreadyScheduled: boolean;
   pathPolyline: string;
   distanceKm: number;
+  departureLatLng: { lat: number; lng: number };
+  arrivalLatLng: { lat: number; lng: number };
+}
+
+interface AddressData {
+  formatted: string;
+  lat: number;
+  lng: number;
 }
 
 const SendParcel: React.FC = () => {
-  // Departure fields
-  const [depStreet, setDepStreet] = useState('');
-  const [depNumber, setDepNumber] = useState('');
-  const [depPostalCode, setDepPostalCode] = useState('');
-  const [depCity, setDepCity] = useState('');
-  const [depProvince, setDepProvince] = useState('');
-  const [depCountry, setDepCountry] = useState('');
+  // Address data with coordinates
+  const [departureAddress, setDepartureAddress] = useState<AddressData | null>(null);
+  const [arrivalAddress, setArrivalAddress] = useState<AddressData | null>(null);
 
-  // Arrival fields
-  const [arrStreet, setArrStreet] = useState('');
-  const [arrNumber, setArrNumber] = useState('');
-  const [arrPostalCode, setArrPostalCode] = useState('');
-  const [arrCity, setArrCity] = useState('');
-  const [arrProvince, setArrProvince] = useState('');
-  const [arrCountry, setArrCountry] = useState('');
+  // Input values for display
+  const [departureInputValue, setDepartureInputValue] = useState('');
+  const [arrivalInputValue, setArrivalInputValue] = useState('');
+
+  // Refs for input elements
+  const departureInputRef = useRef<HTMLInputElement>(null);
+  const arrivalInputRef = useRef<HTMLInputElement>(null);
+
+  // Refs to store autocomplete instances
+  const departureAutocompleteRef = useRef<any>(null);
+  const arrivalAutocompleteRef = useRef<any>(null);
 
   const [arrivalDate, setArrivalDate] = useState('');
   const [width, setWidth] = useState('');
@@ -35,25 +50,134 @@ const SendParcel: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [trips, setTrips] = useState<TripDTO[]>([]);
   const [selectedTrip, setSelectedTrip] = useState<number | null>(null);
+  const [googleLoaded, setGoogleLoaded] = useState(false);
+
+  // Check if Google Maps is loaded
+  useEffect(() => {
+    const checkGoogleMaps = () => {
+      if (window.google && window.google.maps && window.google.maps.places) {
+        setGoogleLoaded(true);
+        return true;
+      }
+      return false;
+    };
+
+    if (checkGoogleMaps()) return;
+
+    // Poll for Google Maps to load
+    const interval = setInterval(() => {
+      if (checkGoogleMaps()) {
+        clearInterval(interval);
+      }
+    }, 100);
+
+    return () => clearInterval(interval);
+  }, []);
+
+  // Initialize Google Places Autocomplete
+  useEffect(() => {
+    if (!googleLoaded) return;
+
+    // Initialize departure autocomplete
+    if (departureInputRef.current && !departureAutocompleteRef.current) {
+      departureAutocompleteRef.current = new window.google.maps.places.Autocomplete(
+        departureInputRef.current,
+        {
+          componentRestrictions: { country: ['it', 'de', 'fr', 'es', 'at', 'ch'] },
+          types: ['address'],
+          fields: ['formatted_address', 'geometry', 'name']
+        }
+      );
+
+      departureAutocompleteRef.current.addListener('place_changed', () => {
+        const place = departureAutocompleteRef.current?.getPlace();
+        
+        if (place && place.geometry && place.geometry.location) {
+          const lat = place.geometry.location.lat();
+          const lng = place.geometry.location.lng();
+          const formatted = place.formatted_address || place.name || '';
+
+          console.log('Departure place selected:', { formatted, lat, lng });
+
+          setDepartureAddress({ formatted, lat, lng });
+          setDepartureInputValue(formatted);
+        }
+      });
+    }
+
+    // Initialize arrival autocomplete
+    if (arrivalInputRef.current && !arrivalAutocompleteRef.current) {
+      arrivalAutocompleteRef.current = new window.google.maps.places.Autocomplete(
+        arrivalInputRef.current,
+        {
+          componentRestrictions: { country: ['it', 'de', 'fr', 'es', 'at', 'ch'] },
+          types: ['address'],
+          fields: ['formatted_address', 'geometry', 'name']
+        }
+      );
+
+      arrivalAutocompleteRef.current.addListener('place_changed', () => {
+        const place = arrivalAutocompleteRef.current?.getPlace();
+        
+        if (place && place.geometry && place.geometry.location) {
+          const lat = place.geometry.location.lat();
+          const lng = place.geometry.location.lng();
+          const formatted = place.formatted_address || place.name || '';
+
+          console.log('Arrival place selected:', { formatted, lat, lng });
+
+          setArrivalAddress({ formatted, lat, lng });
+          setArrivalInputValue(formatted);
+        }
+      });
+    }
+  }, [googleLoaded]);
+
+  // Clear address when input is manually changed
+  const handleDepartureInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setDepartureInputValue(e.target.value);
+    // Clear the confirmed address if user edits manually
+    if (departureAddress && e.target.value !== departureAddress.formatted) {
+      setDepartureAddress(null);
+    }
+  };
+
+  const handleArrivalInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setArrivalInputValue(e.target.value);
+    // Clear the confirmed address if user edits manually
+    if (arrivalAddress && e.target.value !== arrivalAddress.formatted) {
+      setArrivalAddress(null);
+    }
+  };
 
   const handleFindResults = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!depStreet.trim() || !depNumber.trim() || !depPostalCode.trim() || 
-        !depCity.trim() || !depProvince.trim() || !depCountry.trim() ||
-        !arrStreet.trim() || !arrNumber.trim() || !arrPostalCode.trim() || 
-        !arrCity.trim() || !arrProvince.trim() || !arrCountry.trim() ||
-        !arrivalDate || !width || !height || !length || !weight) {
+    // Validate that addresses were selected from autocomplete
+    if (!departureAddress) {
+      alert('Please select a departure address from the suggestions.');
+      return;
+    }
+    if (!arrivalAddress) {
+      alert('Please select an arrival address from the suggestions.');
+      return;
+    }
+    if (!arrivalDate || !width || !height || !length || !weight) {
       alert('All fields are required.');
       return;
     }
 
-    const departureAddress = `${depStreet} ${depNumber}, ${depPostalCode} ${depCity} ${depProvince}, ${depCountry}`;
-    const arrivalAddress = `${arrStreet} ${arrNumber}, ${arrPostalCode} ${arrCity} ${arrProvince}, ${arrCountry}`;
-
     const shipmentData = {
-      departureAddress,
-      arrivalAddress,
+      departureAddress: departureAddress.formatted,
+      arrivalAddress: arrivalAddress.formatted,
+      departureLatLng: {
+        lat: departureAddress.lat,
+        lng: departureAddress.lng
+      },
+      arrivalLatLng: {
+        lat: arrivalAddress.lat,
+        lng: arrivalAddress.lng
+      },
       arrivalDate,
       width: parseInt(width),
       height: parseInt(height),
@@ -61,6 +185,8 @@ const SendParcel: React.FC = () => {
       weight: parseInt(weight),
       refrigerated
     };
+
+    console.log('Sending shipment data:', shipmentData);
 
     try {
       setIsLoading(true);
@@ -77,15 +203,10 @@ const SendParcel: React.FC = () => {
 
       if (!response.ok) {
         const errorMsg = responseData.message || 'Server error';
-        if (errorMsg.includes('Address not found')) {
-          alert('Address not found. Please verify:\n- Street name is correct\n- City and postal code match\n- Try using a nearby landmark or main street');
-        } else {
-          alert(errorMsg);
-        }
+        alert(errorMsg);
         return;
       }
       
-      // Extract trips from the new ApiResponseDTO format
       setTrips(responseData.body || []);
     } catch (err) {
       console.error(err);
@@ -101,9 +222,13 @@ const SendParcel: React.FC = () => {
       return;
     }
     
+    if (!departureAddress || !arrivalAddress) {
+      alert('Address data is missing. Please search again.');
+      return;
+    }
+
     const selectedTripData = trips[selectedTrip];
     
-    // Create the SelectedTripDTO with trip and shipment data
     const selectedTripDTO = {
       trip: {
         vehicleName: selectedTripData.vehicleName,
@@ -112,18 +237,28 @@ const SendParcel: React.FC = () => {
         distanceKm: selectedTripData.distanceKm,
         price: selectedTripData.price,
         scheduled: selectedTripData.alreadyScheduled,
-        started: false
+        started: false,
+        departureLatLng: selectedTripData.departureLatLng,
+        arrivalLatLng: selectedTripData.arrivalLatLng
       },
       shipment: {
         vehicleName: selectedTripData.vehicleName,
-        departureAddress: `${depStreet} ${depNumber}, ${depPostalCode} ${depCity} ${depProvince}, ${depCountry}`,
-        arrivalAddress: `${arrStreet} ${arrNumber}, ${arrPostalCode} ${arrCity} ${arrProvince}, ${arrCountry}`,
+        departureAddress: departureAddress.formatted,
+        arrivalAddress: arrivalAddress.formatted,
         arrivalDate: arrivalDate,
         weight: parseInt(weight),
         width: parseInt(width),
         height: parseInt(height),
         length: parseInt(length),
-        refrigerated: refrigerated
+        refrigerated: refrigerated,
+        departureLatLng: {
+          lat: departureAddress.lat,
+          lng: departureAddress.lng
+        },
+        arrivalLatLng: {
+          lat: arrivalAddress.lat,
+          lng: arrivalAddress.lng
+        }
       }
     };
 
@@ -133,7 +268,7 @@ const SendParcel: React.FC = () => {
       const response = await fetch('http://localhost:8081/api/carrier/selectTrip', {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
+          'Content-Type': 'application/json'
         },
         body: JSON.stringify(selectedTripDTO)
       });
@@ -148,18 +283,10 @@ const SendParcel: React.FC = () => {
       alert(responseData.message || 'Trip confirmed successfully!');
       
       // Reset the form and results
-      setDepStreet('');
-      setDepNumber('');
-      setDepPostalCode('');
-      setDepCity('');
-      setDepProvince('');
-      setDepCountry('');
-      setArrStreet('');
-      setArrNumber('');
-      setArrPostalCode('');
-      setArrCity('');
-      setArrProvince('');
-      setArrCountry('');
+      setDepartureAddress(null);
+      setArrivalAddress(null);
+      setDepartureInputValue('');
+      setArrivalInputValue('');
       setArrivalDate('');
       setWidth('');
       setHeight('');
@@ -177,182 +304,110 @@ const SendParcel: React.FC = () => {
     }
   };
 
+  const clearDepartureAddress = () => {
+    setDepartureAddress(null);
+    setDepartureInputValue('');
+    if (departureInputRef.current) {
+      departureInputRef.current.focus();
+    }
+  };
+
+  const clearArrivalAddress = () => {
+    setArrivalAddress(null);
+    setArrivalInputValue('');
+    if (arrivalInputRef.current) {
+      arrivalInputRef.current.focus();
+    }
+  };
+
   return (
     <div className="max-w-6xl mx-auto bg-gray-900 text-white p-8 mt-8 rounded-lg shadow-lg">
       <h1 className="text-3xl font-bold mb-6 text-center">Send Parcel</h1>
       
+      {!googleLoaded && (
+        <div className="mb-4 p-4 bg-yellow-600 rounded-lg text-center">
+          Loading Google Maps...
+        </div>
+      )}
+
       <form onSubmit={handleFindResults} className="space-y-6">
         {/* Departure Address */}
         <div>
           <h2 className="text-xl font-semibold mb-3">Departure Address</h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="md:col-span-2">
-              <label htmlFor="depStreet" className="block mb-2 font-medium">
-                Street:
-              </label>
-              <input
-                type="text"
-                id="depStreet"
-                placeholder="Enter street name"
-                value={depStreet}
-                onChange={(e) => setDepStreet(e.target.value)}
-                className="w-full px-4 py-3 rounded-lg border border-gray-700 bg-gray-800 text-white focus:border-gray-500 focus:outline-none"
-              />
-            </div>
-            <div>
-              <label htmlFor="depNumber" className="block mb-2 font-medium">
-                Number:
-              </label>
-              <input
-                type="text"
-                id="depNumber"
-                placeholder="No."
-                value={depNumber}
-                onChange={(e) => setDepNumber(e.target.value)}
-                className="w-full px-4 py-3 rounded-lg border border-gray-700 bg-gray-800 text-white focus:border-gray-500 focus:outline-none"
-              />
-            </div>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
-            <div>
-              <label htmlFor="depPostalCode" className="block mb-2 font-medium">
-                Postal Code:
-              </label>
-              <input
-                type="text"
-                id="depPostalCode"
-                placeholder="ZIP/Postal Code"
-                value={depPostalCode}
-                onChange={(e) => setDepPostalCode(e.target.value)}
-                className="w-full px-4 py-3 rounded-lg border border-gray-700 bg-gray-800 text-white focus:border-gray-500 focus:outline-none"
-              />
-            </div>
-            <div>
-              <label htmlFor="depCity" className="block mb-2 font-medium">
-                City:
-              </label>
-              <input
-                type="text"
-                id="depCity"
-                placeholder="City"
-                value={depCity}
-                onChange={(e) => setDepCity(e.target.value)}
-                className="w-full px-4 py-3 rounded-lg border border-gray-700 bg-gray-800 text-white focus:border-gray-500 focus:outline-none"
-              />
-            </div>
-            <div>
-              <label htmlFor="depProvince" className="block mb-2 font-medium">
-                Province:
-              </label>
-              <input
-                type="text"
-                id="depProvince"
-                placeholder="Province/State"
-                value={depProvince}
-                onChange={(e) => setDepProvince(e.target.value)}
-                className="w-full px-4 py-3 rounded-lg border border-gray-700 bg-gray-800 text-white focus:border-gray-500 focus:outline-none"
-              />
-            </div>
-          </div>
-          <div className="mt-4">
-            <label htmlFor="depCountry" className="block mb-2 font-medium">
-              Country:
+          <div>
+            <label htmlFor="departureAddress" className="block mb-2 font-medium">
+              Search Address:
             </label>
             <input
+              ref={departureInputRef}
               type="text"
-              id="depCountry"
-              placeholder="Country"
-              value={depCountry}
-              onChange={(e) => setDepCountry(e.target.value)}
-              className="w-full px-4 py-3 rounded-lg border border-gray-700 bg-gray-800 text-white focus:border-gray-500 focus:outline-none"
+              id="departureAddress"
+              placeholder="Start typing an address..."
+              value={departureInputValue}
+              onChange={handleDepartureInputChange}
+              disabled={!googleLoaded}
+              className="w-full px-4 py-3 rounded-lg border border-gray-700 bg-gray-800 text-white focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
             />
+            {departureAddress && (
+              <div className="mt-2 p-3 bg-gray-800 border border-green-600 rounded-lg">
+                <div className="flex justify-between items-start">
+                  <div>
+                    <p className="text-sm text-green-400 font-medium">✓ Address confirmed</p>
+                    <p className="text-sm text-gray-300 mt-1">{departureAddress.formatted}</p>
+                    <p className="text-xs text-gray-500 mt-1">
+                      Coordinates: {departureAddress.lat.toFixed(6)}, {departureAddress.lng.toFixed(6)}
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={clearDepartureAddress}
+                    className="text-gray-400 hover:text-white text-xl ml-2"
+                  >
+                    ×
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
 
         {/* Arrival Address */}
         <div>
           <h2 className="text-xl font-semibold mb-3">Arrival Address</h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="md:col-span-2">
-              <label htmlFor="arrStreet" className="block mb-2 font-medium">
-                Street:
-              </label>
-              <input
-                type="text"
-                id="arrStreet"
-                placeholder="Enter street name"
-                value={arrStreet}
-                onChange={(e) => setArrStreet(e.target.value)}
-                className="w-full px-4 py-3 rounded-lg border border-gray-700 bg-gray-800 text-white focus:border-gray-500 focus:outline-none"
-              />
-            </div>
-            <div>
-              <label htmlFor="arrNumber" className="block mb-2 font-medium">
-                Number:
-              </label>
-              <input
-                type="text"
-                id="arrNumber"
-                placeholder="No."
-                value={arrNumber}
-                onChange={(e) => setArrNumber(e.target.value)}
-                className="w-full px-4 py-3 rounded-lg border border-gray-700 bg-gray-800 text-white focus:border-gray-500 focus:outline-none"
-              />
-            </div>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
-            <div>
-              <label htmlFor="arrPostalCode" className="block mb-2 font-medium">
-                Postal Code:
-              </label>
-              <input
-                type="text"
-                id="arrPostalCode"
-                placeholder="ZIP/Postal Code"
-                value={arrPostalCode}
-                onChange={(e) => setArrPostalCode(e.target.value)}
-                className="w-full px-4 py-3 rounded-lg border border-gray-700 bg-gray-800 text-white focus:border-gray-500 focus:outline-none"
-              />
-            </div>
-            <div>
-              <label htmlFor="arrCity" className="block mb-2 font-medium">
-                City:
-              </label>
-              <input
-                type="text"
-                id="arrCity"
-                placeholder="City"
-                value={arrCity}
-                onChange={(e) => setArrCity(e.target.value)}
-                className="w-full px-4 py-3 rounded-lg border border-gray-700 bg-gray-800 text-white focus:border-gray-500 focus:outline-none"
-              />
-            </div>
-            <div>
-              <label htmlFor="arrProvince" className="block mb-2 font-medium">
-                Province:
-              </label>
-              <input
-                type="text"
-                id="arrProvince"
-                placeholder="Province/State"
-                value={arrProvince}
-                onChange={(e) => setArrProvince(e.target.value)}
-                className="w-full px-4 py-3 rounded-lg border border-gray-700 bg-gray-800 text-white focus:border-gray-500 focus:outline-none"
-              />
-            </div>
-          </div>
-          <div className="mt-4">
-            <label htmlFor="arrCountry" className="block mb-2 font-medium">
-              Country:
+          <div>
+            <label htmlFor="arrivalAddress" className="block mb-2 font-medium">
+              Search Address:
             </label>
             <input
+              ref={arrivalInputRef}
               type="text"
-              id="arrCountry"
-              placeholder="Country"
-              value={arrCountry}
-              onChange={(e) => setArrCountry(e.target.value)}
-              className="w-full px-4 py-3 rounded-lg border border-gray-700 bg-gray-800 text-white focus:border-gray-500 focus:outline-none"
+              id="arrivalAddress"
+              placeholder="Start typing an address..."
+              value={arrivalInputValue}
+              onChange={handleArrivalInputChange}
+              disabled={!googleLoaded}
+              className="w-full px-4 py-3 rounded-lg border border-gray-700 bg-gray-800 text-white focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
             />
+            {arrivalAddress && (
+              <div className="mt-2 p-3 bg-gray-800 border border-green-600 rounded-lg">
+                <div className="flex justify-between items-start">
+                  <div>
+                    <p className="text-sm text-green-400 font-medium">✓ Address confirmed</p>
+                    <p className="text-sm text-gray-300 mt-1">{arrivalAddress.formatted}</p>
+                    <p className="text-xs text-gray-500 mt-1">
+                      Coordinates: {arrivalAddress.lat.toFixed(6)}, {arrivalAddress.lng.toFixed(6)}
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={clearArrivalAddress}
+                    className="text-gray-400 hover:text-white text-xl ml-2"
+                  >
+                    ×
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
 
@@ -451,7 +506,7 @@ const SendParcel: React.FC = () => {
 
         <button
           type="submit"
-          disabled={isLoading}
+          disabled={isLoading || !departureAddress || !arrivalAddress || !googleLoaded}
           className="w-full px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200 font-medium disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {isLoading ? 'Searching...' : 'Find Results'}
@@ -503,10 +558,10 @@ const SendParcel: React.FC = () => {
 
           <button
             onClick={handleConfirm}
-            disabled={selectedTrip === null}
+            disabled={selectedTrip === null || isLoading}
             className="mt-6 w-full px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors duration-200 font-medium disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            Confirm Selection
+            {isLoading ? 'Confirming...' : 'Confirm Selection'}
           </button>
         </div>
       )}
