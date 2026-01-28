@@ -18,6 +18,10 @@ interface TripDTO {
   price: number;
   departureLatLng: { lat: number; lng: number };
   arrivalLatLng: { lat: number; lng: number };
+  remainingWidth: number;
+  remainingHeight: number;
+  remainingLength: number;
+  remainingWeight: number;
 }
 
 interface ShipmentDTO {
@@ -46,6 +50,22 @@ const mapOptions = {
   rotateControl: false,          // Disabilita rotazione
   panControl: false,             // Disabilita pan control
   gestureHandling: 'cooperative' // Migliore gestione gesti su mobile
+};
+
+// Helper function per formattare la data senza orario
+const formatDateOnly = (dateString: string): string => {
+  if (!dateString) return '';
+  try {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('it-IT', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric'
+    });
+  } catch {
+    // Se la data Ã¨ giÃ  in formato semplice, ritornala cosÃ¬ com'Ã¨
+    return dateString.split('T')[0];
+  }
 };
 
 const TripList: React.FC = () => {
@@ -203,7 +223,10 @@ const TripList: React.FC = () => {
     // If clicking on the same trip, toggle it closed
     if (expandedTripIndex === index) {
       setExpandedTripIndex(null);
-      setShipments([]);
+      // Delay clearing shipments until animation completes (500ms)
+      setTimeout(() => {
+        setShipments([]);
+      }, 500);
       return;
     }
 
@@ -477,34 +500,69 @@ const TripList: React.FC = () => {
       ) : (
         <div className="space-y-4">
           {trips.map((trip, index) => (
-            <div key={trip.id || `${trip.vehicleName}-${index}`} className="bg-gray-800 rounded-lg border border-gray-700">
+            <div key={trip.id || `${trip.vehicleName}-${index}`} className="bg-gray-800 rounded-lg border border-gray-700 overflow-hidden">
               <div
                 className="p-6 cursor-pointer hover:bg-gray-750 transition-colors"
                 onClick={() => handleShowShipments(trip, index)}
               >
                 <div className="flex justify-between items-start mb-4">
-                  <div>
-                    <h2 className="text-xl font-bold text-white mb-2">{trip.vehicleName}</h2>
+                  <div className="flex items-center gap-3">
+                    <h2 className="text-xl font-bold text-white">{trip.vehicleName}</h2>
                     <span className={`px-2 py-1 text-white text-xs rounded ${
                       trip.started ? 'bg-green-600' : 'bg-gray-600'
                     }`}>
                       {trip.started ? 'Started' : 'Pending'}
                     </span>
                   </div>
+                  {/* Chevron indicator for expand/collapse */}
+                  <svg 
+                    className={`w-6 h-6 text-gray-400 transition-transform duration-300 ease-in-out ${
+                      expandedTripIndex === index ? 'rotate-180' : ''
+                    }`}
+                    fill="none" 
+                    stroke="currentColor" 
+                    viewBox="0 0 24 24"
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </svg>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                   <div>
                     <p className="text-sm text-gray-400">Arrival Date</p>
-                    <p className="font-semibold">{trip.arrivalDate}</p>
+                    <p className="font-semibold">{formatDateOnly(trip.arrivalDate)}</p>
                   </div>
                   <div>
                     <p className="text-sm text-gray-400">Distance</p>
-                    <p className="font-semibold">{trip.distanceKm.toFixed(2)} km</p>
+                    <p className="font-semibold">{trip.distanceKm?.toFixed(2) || '0.00'} km</p>
                   </div>
-                  <div>
-                    <p className="text-sm text-gray-400">Price</p>
-                    <p className="font-semibold">€{trip.price.toFixed(2)}</p>
+                </div>
+
+                {/* Remaining Capacity Section */}
+                <div className="mb-4 p-3 bg-gray-700 rounded-lg">
+                  <p className="text-sm text-gray-400 mb-2 flex items-center gap-2">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+                    </svg>
+                    Remaining Capacity
+                  </p>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                    <div className="text-center">
+                      <p className="text-xs text-gray-400">Weight</p>
+                      <p className="font-semibold text-blue-400">{trip.remainingWeight ?? 0} kg</p>
+                    </div>
+                    <div className="text-center">
+                      <p className="text-xs text-gray-400">Width</p>
+                      <p className="font-semibold text-green-400">{trip.remainingWidth ?? 0} cm</p>
+                    </div>
+                    <div className="text-center">
+                      <p className="text-xs text-gray-400">Height</p>
+                      <p className="font-semibold text-yellow-400">{trip.remainingHeight ?? 0} cm</p>
+                    </div>
+                    <div className="text-center">
+                      <p className="text-xs text-gray-400">Length</p>
+                      <p className="font-semibold text-purple-400">{trip.remainingLength ?? 0} cm</p>
+                    </div>
                   </div>
                 </div>
 
@@ -544,25 +602,44 @@ const TripList: React.FC = () => {
                 </div>
               </div>
 
-              {/* Expanded Shipments Section */}
-              {expandedTripIndex === index && (
+              {/* Expanded Shipments Section with Animation */}
+              <div 
+                className={`overflow-hidden transition-all duration-500 ease-in-out ${
+                  expandedTripIndex === index 
+                    ? 'max-h-[2000px] opacity-100' 
+                    : 'max-h-0 opacity-0'
+                }`}
+              >
                 <div className="border-t border-gray-700 p-6 bg-gray-850">
-                  <h3 className="text-lg font-bold mb-4">Shipments</h3>
+                  <h3 className="text-lg font-bold mb-4 flex items-center gap-2">
+                    <svg className="w-5 h-5 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+                    </svg>
+                    Shipments
+                  </h3>
                   
                   {loadingShipments ? (
                     <div className="text-center py-8">
+                      <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mb-2"></div>
                       <p className="text-gray-400">Loading shipments...</p>
                     </div>
                   ) : shipments.length === 0 ? (
                     <div className="text-center py-8">
+                      <svg className="w-12 h-12 text-gray-600 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
+                      </svg>
                       <p className="text-gray-400">No shipments found for this trip.</p>
                     </div>
                   ) : (
                     <div className="space-y-4">
-                      {shipments.map((shipment) => (
+                      {shipments.map((shipment, shipmentIndex) => (
                         <div
                           key={shipment.id}
-                          className="bg-gray-700 rounded-lg p-4 border border-gray-600"
+                          className="bg-gray-700 rounded-lg p-4 border border-gray-600 transform transition-all duration-300 ease-out"
+                          style={{
+                            animationDelay: `${shipmentIndex * 100}ms`,
+                            animation: expandedTripIndex === index ? 'slideDown 0.3s ease-out forwards' : 'none'
+                          }}
                         >
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-3">
                             <div>
@@ -579,7 +656,7 @@ const TripList: React.FC = () => {
                             <div>
                               <p className="text-sm text-gray-400">Dimensions</p>
                               <p className="font-semibold text-sm">
-                                {shipment.length}×{shipment.width}×{shipment.height} cm
+                                {shipment.length}Ã—{shipment.width}Ã—{shipment.height} cm
                               </p>
                             </div>
                             <div>
@@ -588,7 +665,7 @@ const TripList: React.FC = () => {
                             </div>
                             <div>
                               <p className="text-sm text-gray-400">Arrival Date</p>
-                              <p className="font-semibold text-sm">{shipment.arrivalDate}</p>
+                              <p className="font-semibold text-sm">{formatDateOnly(shipment.arrivalDate)}</p>
                             </div>
                             <div>
                               <p className="text-sm text-gray-400">Refrigeration</p>
@@ -620,7 +697,7 @@ const TripList: React.FC = () => {
                     </div>
                   )}
                 </div>
-              )}
+              </div>
             </div>
           ))}
         </div>
@@ -639,7 +716,7 @@ const TripList: React.FC = () => {
                 }}
                 className="text-gray-400 hover:text-white text-2xl"
               >
-                ×
+                Ã—
               </button>
             </div>
 
@@ -699,7 +776,7 @@ const TripList: React.FC = () => {
                 }}
                 className="text-gray-400 hover:text-white text-2xl"
               >
-                ×
+                Ã—
               </button>
             </div>
 
@@ -727,11 +804,11 @@ const TripList: React.FC = () => {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-3">
                 <div>
                   <p className="text-sm text-gray-400">Distance</p>
-                  <p className="font-semibold">{selectedTripForMap.distanceKm.toFixed(2)} km</p>
+                  <p className="font-semibold">{selectedTripForMap.distanceKm?.toFixed(2) || '0.00'} km</p>
                 </div>
                 <div>
                   <p className="text-sm text-gray-400">Arrival Date</p>
-                  <p className="font-semibold">{selectedTripForMap.arrivalDate}</p>
+                  <p className="font-semibold">{formatDateOnly(selectedTripForMap.arrivalDate)}</p>
                 </div>
               </div>
             </div>
@@ -796,6 +873,20 @@ const TripList: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* CSS Animation for slideDown effect */}
+      <style>{`
+        @keyframes slideDown {
+          from {
+            opacity: 0;
+            transform: translateY(-10px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+      `}</style>
     </div>
   );
 };

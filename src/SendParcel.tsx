@@ -7,15 +7,46 @@ declare global {
   }
 }
 
+interface LatLng {
+  lat: number;
+  lng: number;
+}
+
 interface TripDTO {
+  id?: string;
   vehicleName: string;
   arrivalDate: string;
   price: number;
-  alreadyScheduled: boolean;
+  scheduled: boolean;
+  started: boolean;
   pathPolyline: string;
   distanceKm: number;
-  departureLatLng: { lat: number; lng: number };
-  arrivalLatLng: { lat: number; lng: number };
+  duration: number;
+  departureLatLng: LatLng;
+  arrivalLatLng: LatLng;
+}
+
+interface ShipmentDTO {
+  id?: string;
+  vehicleName?: string;
+  departureAddress: string;
+  arrivalAddress: string;
+  distanceKm: number;
+  departureLatLng: LatLng;
+  arrivalLatLng: LatLng;
+  arrivalDate: string;
+  width: number;
+  height: number;
+  length: number;
+  weight: number;
+  refrigerated: boolean;
+  price?: number;
+  duration: number;
+}
+
+interface RetrievedTripsDTO {
+  tripsDTO: TripDTO[];
+  shipmentDTO: ShipmentDTO;
 }
 
 interface AddressData {
@@ -51,6 +82,9 @@ const SendParcel: React.FC = () => {
   const [trips, setTrips] = useState<TripDTO[]>([]);
   const [selectedTrip, setSelectedTrip] = useState<number | null>(null);
   const [googleLoaded, setGoogleLoaded] = useState(false);
+  
+  // Store the shipment DTO returned from server (with computed distance/duration)
+  const [serverShipmentDTO, setServerShipmentDTO] = useState<ShipmentDTO | null>(null);
 
   // Check if Google Maps is loaded
   useEffect(() => {
@@ -167,7 +201,8 @@ const SendParcel: React.FC = () => {
       return;
     }
 
-    const shipmentData = {
+    // Build ShipmentDTO to send to server
+    const shipmentData: Partial<ShipmentDTO> = {
       departureAddress: departureAddress.formatted,
       arrivalAddress: arrivalAddress.formatted,
       departureLatLng: {
@@ -207,7 +242,13 @@ const SendParcel: React.FC = () => {
         return;
       }
       
-      setTrips(responseData.body || []);
+      // Extract data from RetrievedTripsDTO
+      const retrievedTrips: RetrievedTripsDTO = responseData.body;
+      
+      setTrips(retrievedTrips.tripsDTO || []);
+      setServerShipmentDTO(retrievedTrips.shipmentDTO);
+      setSelectedTrip(null);
+      
     } catch (err) {
       console.error(err);
       alert('Failed to retrieve trips');
@@ -222,49 +263,39 @@ const SendParcel: React.FC = () => {
       return;
     }
     
-    if (!departureAddress || !arrivalAddress) {
-      alert('Address data is missing. Please search again.');
+    if (!serverShipmentDTO) {
+      alert('Shipment data is missing. Please search again.');
       return;
     }
 
     const selectedTripData = trips[selectedTrip];
     
+    // Build SelectedTripDTO using the server-computed shipmentDTO
+    // Add vehicleName and price from the selected trip to the shipment
     const selectedTripDTO = {
       trip: {
+        id: selectedTripData.id,
         vehicleName: selectedTripData.vehicleName,
         arrivalDate: selectedTripData.arrivalDate,
         pathPolyline: selectedTripData.pathPolyline,
         distanceKm: selectedTripData.distanceKm,
+        duration: selectedTripData.duration,
         price: selectedTripData.price,
-        scheduled: selectedTripData.alreadyScheduled,
-        started: false,
+        scheduled: selectedTripData.scheduled,
+        started: selectedTripData.started,
         departureLatLng: selectedTripData.departureLatLng,
         arrivalLatLng: selectedTripData.arrivalLatLng
       },
       shipment: {
+        ...serverShipmentDTO,
         vehicleName: selectedTripData.vehicleName,
-        departureAddress: departureAddress.formatted,
-        arrivalAddress: arrivalAddress.formatted,
-        arrivalDate: arrivalDate,
-        weight: parseInt(weight),
-        width: parseInt(width),
-        height: parseInt(height),
-        length: parseInt(length),
-        refrigerated: refrigerated,
-        departureLatLng: {
-          lat: departureAddress.lat,
-          lng: departureAddress.lng
-        },
-        arrivalLatLng: {
-          lat: arrivalAddress.lat,
-          lng: arrivalAddress.lng
-        }
+        price: selectedTripData.price // Use the trip's price for the shipment
       }
     };
 
     try {
       setIsLoading(true);
-      
+      console.log('Sending to selectTrip:', JSON.stringify(selectedTripDTO, null, 2));
       const response = await fetch('http://localhost:8081/api/carrier/selectTrip', {
         method: 'POST',
         headers: {
@@ -295,6 +326,7 @@ const SendParcel: React.FC = () => {
       setRefrigerated(false);
       setTrips([]);
       setSelectedTrip(null);
+      setServerShipmentDTO(null);
       
     } catch (err) {
       console.error(err);
@@ -318,6 +350,16 @@ const SendParcel: React.FC = () => {
     if (arrivalInputRef.current) {
       arrivalInputRef.current.focus();
     }
+  };
+
+  // Helper function to format duration
+  const formatDuration = (seconds: number): string => {
+    const hours = Math.floor(seconds / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+    if (hours > 0) {
+      return `${hours}h ${minutes}m`;
+    }
+    return `${minutes}m`;
   };
 
   return (
@@ -519,7 +561,7 @@ const SendParcel: React.FC = () => {
           <div className="space-y-4">
             {trips.map((trip, index) => (
               <div
-                key={index}
+                key={trip.id || index}
                 className={`p-4 rounded-lg border-2 cursor-pointer transition-all ${
                   selectedTrip === index
                     ? 'border-blue-500 bg-gray-800'
@@ -527,25 +569,31 @@ const SendParcel: React.FC = () => {
                 }`}
                 onClick={() => setSelectedTrip(index)}
               >
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-center">
+                <div className="grid grid-cols-1 md:grid-cols-5 gap-4 items-center">
                   <div>
                     <p className="text-sm text-gray-400">Vehicle</p>
                     <p className="font-semibold">{trip.vehicleName}</p>
                   </div>
                   <div>
                     <p className="text-sm text-gray-400">Arrival Date</p>
-                    <p className="font-semibold">{trip.arrivalDate}</p>
+                    <p className="font-semibold">
+                      {new Date(trip.arrivalDate).toLocaleDateString()}
+                    </p>
                   </div>
                   <div>
                     <p className="text-sm text-gray-400">Distance</p>
                     <p className="font-semibold">{trip.distanceKm.toFixed(2)} km</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-400">Duration</p>
+                    <p className="font-semibold">{formatDuration(trip.duration)}</p>
                   </div>
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="text-sm text-gray-400">Price</p>
                       <p className="font-semibold">€{trip.price.toFixed(2)}</p>
                     </div>
-                    {trip.alreadyScheduled && (
+                    {trip.scheduled && (
                       <span className="px-3 py-1 bg-yellow-600 text-white text-xs rounded">
                         Already Scheduled
                       </span>
