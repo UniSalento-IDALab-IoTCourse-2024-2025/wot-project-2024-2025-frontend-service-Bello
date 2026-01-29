@@ -147,7 +147,7 @@ const VehicleList: React.FC = () => {
                 <div className="flex justify-between">
                   <span className="text-gray-400">Dimensions:</span>
                   <span className="text-white font-medium">
-                    {vehicle.length}m × {vehicle.width}m × {vehicle.height}m
+                    {vehicle.width}cm × {vehicle.height}cm × {vehicle.length}cm
                   </span>
                 </div>
                 <div className="flex justify-between">

@@ -37,6 +37,7 @@ interface ShipmentDTO {
   arrivalDate: string;
   departureLatLng: { lat: number; lng: number };
   arrivalLatLng: { lat: number; lng: number };
+  price: number;
 }
 
 // Opzioni mappa semplificata - senza controlli non necessari
@@ -63,7 +64,7 @@ const formatDateOnly = (dateString: string): string => {
       year: 'numeric'
     });
   } catch {
-    // Se la data Ã¨ giÃ  in formato semplice, ritornala cosÃ¬ com'Ã¨
+    // Se la data ÃƒÂ¨ giÃƒÂ  in formato semplice, ritornala cosÃƒÂ¬ com'ÃƒÂ¨
     return dateString.split('T')[0];
   }
 };
@@ -652,16 +653,20 @@ const TripList: React.FC = () => {
                             </div>
                           </div>
 
-                          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-3">
+                          <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-3">
                             <div>
                               <p className="text-sm text-gray-400">Dimensions</p>
                               <p className="font-semibold text-sm">
-                                {shipment.length}Ã—{shipment.width}Ã—{shipment.height} cm
+                                {shipment.width}×{shipment.height}×{shipment.length} cm
                               </p>
                             </div>
                             <div>
                               <p className="text-sm text-gray-400">Weight</p>
                               <p className="font-semibold text-sm">{shipment.weight} kg</p>
+                            </div>
+                            <div>
+                              <p className="text-sm text-gray-400">Price</p>
+                              <p className="font-semibold text-sm text-green-400">€{shipment.price?.toFixed(2) || '0.00'}</p>
                             </div>
                             <div>
                               <p className="text-sm text-gray-400">Arrival Date</p>
@@ -716,7 +721,9 @@ const TripList: React.FC = () => {
                 }}
                 className="text-gray-400 hover:text-white text-2xl"
               >
-                Ã—
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
               </button>
             </div>
 
@@ -749,16 +756,6 @@ const TripList: React.FC = () => {
               ref={mapRef}
               className="w-full h-96 bg-gray-700 rounded-lg"
             />
-
-            <button
-              onClick={() => {
-                setShowShipmentMapPopup(false);
-                setSelectedShipment(null);
-              }}
-              className="mt-4 w-full px-6 py-3 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors duration-200"
-            >
-              Close
-            </button>
           </div>
         </div>
       )}
@@ -776,7 +773,9 @@ const TripList: React.FC = () => {
                 }}
                 className="text-gray-400 hover:text-white text-2xl"
               >
-                Ã—
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
               </button>
             </div>
 
@@ -832,16 +831,6 @@ const TripList: React.FC = () => {
               ref={tripMapRef}
               className="w-full h-96 bg-gray-700 rounded-lg"
             />
-
-            <button
-              onClick={() => {
-                setShowMapPopup(false);
-                setSelectedTripForMap(null);
-              }}
-              className="mt-4 w-full px-6 py-3 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors duration-200"
-            >
-              Close
-            </button>
           </div>
         </div>
       )}
