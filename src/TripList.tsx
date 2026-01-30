@@ -22,6 +22,7 @@ interface TripDTO {
   remainingHeight: number;
   remainingLength: number;
   remainingWeight: number;
+  refrigerated: boolean;
 }
 
 interface ShipmentDTO {
@@ -64,7 +65,7 @@ const formatDateOnly = (dateString: string): string => {
       year: 'numeric'
     });
   } catch {
-    // Se la data ÃƒÂ¨ giÃƒÂ  in formato semplice, ritornala cosÃƒÂ¬ com'ÃƒÂ¨
+    // Se la data è già in formato semplice, ritornala così com'è
     return dateString.split('T')[0];
   }
 };
@@ -514,6 +515,11 @@ const TripList: React.FC = () => {
                     }`}>
                       {trip.started ? 'Started' : 'Pending'}
                     </span>
+                    {trip.refrigerated && (
+                      <span className="px-2 py-1 bg-blue-600 text-white text-xs rounded">
+                        Refrigerated
+                      </span>
+                    )}
                   </div>
                   {/* Chevron indicator for expand/collapse */}
                   <svg 
@@ -577,20 +583,24 @@ const TripList: React.FC = () => {
                   >
                     View Route
                   </button>
-                  <button
-                    disabled
-                    onClick={(e) => e.stopPropagation()}
-                    className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg opacity-50 cursor-not-allowed"
-                  >
-                    Start
-                  </button>
-                  <button
-                    disabled
-                    onClick={(e) => e.stopPropagation()}
-                    className="flex-1 px-4 py-2 bg-orange-600 text-white rounded-lg opacity-50 cursor-not-allowed"
-                  >
-                    Stop
-                  </button>
+                  {trip.refrigerated && (
+                    <>
+                      <button
+                        disabled
+                        onClick={(e) => e.stopPropagation()}
+                        className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg opacity-50 cursor-not-allowed"
+                      >
+                        Start
+                      </button>
+                      <button
+                        disabled
+                        onClick={(e) => e.stopPropagation()}
+                        className="flex-1 px-4 py-2 bg-orange-600 text-white rounded-lg opacity-50 cursor-not-allowed"
+                      >
+                        Stop
+                      </button>
+                    </>
+                  )}
                   <button
                     onClick={(e) => {
                       e.stopPropagation();

@@ -22,9 +22,9 @@ interface TripDTO {
   pathPolyline: string;
   distanceKm: number;
   duration: number;
-  refrigerated: boolean;
   departureLatLng: LatLng;
   arrivalLatLng: LatLng;
+  refrigerated: boolean;
   remainingWidth: number;
   remainingHeight: number;
   remainingLength: number;
@@ -288,9 +288,9 @@ const SendParcel: React.FC = () => {
         price: selectedTripData.price,
         scheduled: selectedTripData.scheduled,
         started: selectedTripData.started,
-        refrigerated: selectedTripData.refrigerated,
         departureLatLng: selectedTripData.departureLatLng,
         arrivalLatLng: selectedTripData.arrivalLatLng,
+        refrigerated: selectedTripData.refrigerated,
         remainingWidth: selectedTripData.remainingWidth,
         remainingHeight: selectedTripData.remainingHeight,
         remainingLength: selectedTripData.remainingLength,
@@ -603,39 +603,36 @@ const SendParcel: React.FC = () => {
                       <p className="text-sm text-gray-400">Price</p>
                       <p className="font-semibold">€{trip.price.toFixed(2)}</p>
                     </div>
-                    {trip.scheduled && (
-                      <span className="px-3 py-1 bg-yellow-600 text-white text-xs rounded">
-                        Already Scheduled
-                      </span>
-                    )}
+                    <div className="flex gap-2">
+                      {trip.refrigerated && (
+                        <span className="px-3 py-1 bg-blue-600 text-white text-xs rounded">
+                          Refrigerated
+                        </span>
+                      )}
+                      {trip.scheduled && (
+                        <span className="px-3 py-1 bg-yellow-600 text-white text-xs rounded">
+                          Already Scheduled
+                        </span>
+                      )}
+                    </div>
                   </div>
                 </div>
-                
-                {/* Remaining Capacity Section */}
-                <div className="mt-3 pt-3 border-t border-gray-700">
-                  <p className="text-xs text-gray-400 mb-2 flex items-center gap-1">
-                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
-                    </svg>
-                    Available Capacity
-                  </p>
-                  <div className="grid grid-cols-4 gap-2 text-center">
-                    <div>
-                      <p className="text-xs text-gray-500">Weight</p>
-                      <p className="text-sm font-medium text-blue-400">{trip.remainingWeight ?? 0} kg</p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-gray-500">Width</p>
-                      <p className="text-sm font-medium text-green-400">{trip.remainingWidth ?? 0} cm</p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-gray-500">Height</p>
-                      <p className="text-sm font-medium text-yellow-400">{trip.remainingHeight ?? 0} cm</p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-gray-500">Length</p>
-                      <p className="text-sm font-medium text-purple-400">{trip.remainingLength ?? 0} cm</p>
-                    </div>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-3 pt-3 border-t border-gray-700">
+                  <div>
+                    <p className="text-sm text-gray-400">Remaining Width</p>
+                    <p className="font-semibold">{trip.remainingWidth} cm</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-400">Remaining Height</p>
+                    <p className="font-semibold">{trip.remainingHeight} cm</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-400">Remaining Length</p>
+                    <p className="font-semibold">{trip.remainingLength} cm</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-400">Remaining Weight</p>
+                    <p className="font-semibold">{trip.remainingWeight} kg</p>
                   </div>
                 </div>
               </div>
