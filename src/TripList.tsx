@@ -41,20 +41,92 @@ interface ShipmentDTO {
   price: number;
 }
 
-// Opzioni mappa semplificata - senza controlli non necessari
-const mapOptions = {
-  mapTypeId: 'roadmap',
-  streetViewControl: false,      // Disabilita Street View
-  mapTypeControl: false,         // Disabilita cambio tipo mappa (Satellite, ecc.)
-  fullscreenControl: false,      // Disabilita fullscreen
-  zoomControl: true,             // Mantieni zoom
-  scaleControl: true,            // Mantieni scala
-  rotateControl: false,          // Disabilita rotazione
-  panControl: false,             // Disabilita pan control
-  gestureHandling: 'cooperative' // Migliore gestione gesti su mobile
+interface TelemetryData {
+  T_amb: number;
+  T_set: number;
+  T_cab: number;
+  T_evap_sat: number;
+  T_cond_sat: number;
+  P_suc_bar: number;
+  P_dis_bar: number;
+  N_comp_Hz: number;
+  SH_K: number;
+  P_comp_W: number;
+  Q_evap_W: number;
+  COP: number;
+  frost_level: number;
+  T_cab_meas: number;
+  valve_open: number;
+  time_min: number;
+  run_id: number;
+  fault: string;
+  fault_id: number;
+  door_open: number;
+  defrost_on: number;
+  vehicle_name?: string;
+  timestamp?: string;
+  row_index?: number;
+  stream_status?: string;
+  message?: string;
+}
+
+// Formattazione intelligente basata sul valore
+const formatValue = (value: any, unit: string): string => {
+  if (value === null || value === undefined) return 'N/A';
+  
+  if (typeof value === 'boolean') {
+    return value ? 'ON' : 'OFF';
+  }
+  
+  if (typeof value === 'number') {
+    if (unit === 'bool') {
+      return value ? 'ON' : 'OFF';
+    }
+    
+    if (unit === '%') {
+      return (value * 100).toFixed(1) + '%';
+    }
+    
+    if (Math.abs(value) < 0.01 && unit !== 'Hz') {
+      return value.toFixed(4);
+    }
+    
+    if (unit === 'C') {
+      return value.toFixed(2);
+    }
+    
+    if (unit === 'bar') {
+      return value.toFixed(3);
+    }
+    
+    if (unit === 'W') {
+      return value.toFixed(1);
+    }
+    
+    if (unit === 'Hz') {
+      return value.toFixed(2);
+    }
+    
+    return value.toFixed(2);
+  }
+  
+  return String(value);
 };
 
-// Helper function per formattare la data senza orario
+// Opzioni mappa semplificata
+const mapOptions = {
+  mapTypeId: 'roadmap',
+  streetViewControl: false,
+  mapTypeControl: false,
+  fullscreenControl: false,
+  zoomControl: true,
+  scaleControl: true,
+  rotateControl: false,
+  panControl: false,
+  gestureHandling: 'cooperative'
+};
+
+// Helper function per formattare la data
 const formatDateOnly = (dateString: string): string => {
   if (!dateString) return '';
   try {
@@ -65,7 +137,6 @@ const formatDateOnly = (dateString: string): string => {
       year: 'numeric'
     });
   } catch {
-    // Se la data è già in formato semplice, ritornala così com'è
     return dateString.split('T')[0];
   }
 };
@@ -87,8 +158,21 @@ const TripList: React.FC = () => {
   const mapRef = useRef<HTMLDivElement>(null);
   const googleMapInstance = useRef<any>(null);
 
+  // State per simulazione
+  const [activeSimulation, setActiveSimulation] = useState<string | null>(null);
+  const [telemetryData, setTelemetryData] = useState<TelemetryData | null>(null);
+  const [showTelemetryPopup, setShowTelemetryPopup] = useState(false);
+  const [isStartingSimulation, setIsStartingSimulation] = useState(false);
+  const wsRef = useRef<WebSocket | null>(null);
+
   useEffect(() => {
     fetchTrips();
+
+    return () => {
+      if (wsRef.current) {
+        wsRef.current.close();
+      }
+    };
   }, []);
 
   const fetchTrips = async () => {
@@ -120,13 +204,179 @@ const TripList: React.FC = () => {
     }
   };
 
+  // WebSocket e Simulazione
+
+  const connectWebSocket = (vehicleName: string) => {
+    if (wsRef.current) {
+      console.log('Closing previous WebSocket...');
+      wsRef.current.close();
+    }
+
+    console.log(`Connecting WebSocket for ${vehicleName}...`);
+    console.log('URL: ws://localhost:8081/ws/telemetry');
+    
+    const ws = new WebSocket('ws://localhost:8081/ws/telemetry');
+
+    ws.onopen = () => {
+      console.log('WebSocket CONNECTED!');
+      console.log('Waiting for telemetry messages...');
+    };
+
+    ws.onmessage = (event) => {
+      console.log('MESSAGE RECEIVED (raw):', event.data);
+      
+      try {
+        const data: TelemetryData = JSON.parse(event.data);
+        
+        // Controlla se lo stream e' terminato
+        if (data.stream_status === 'completed') {
+          console.log('STREAM COMPLETED!');
+          console.log(`Vehicle: ${data.vehicle_name || activeSimulation}`);
+          console.log(`Message: ${data.message || 'Dataset finished'}`);
+          
+          alert(`Stream completed for ${data.vehicle_name || activeSimulation}!\n${data.message || 'All data has been transmitted.'}`);
+          
+          handleStopSimulation();
+          return;
+        }
+        
+        console.log('Telemetry parsed:');
+        console.log(`  Time: ${data.time_min} min`);
+        console.log(`  T_cab: ${data.T_cab?.toFixed(2)}C`);
+        console.log(`  T_set: ${data.T_set?.toFixed(2)}C`);
+        console.log(`  T_amb: ${data.T_amb?.toFixed(2)}C`);
+        console.log(`  Compressor: ${data.N_comp_Hz?.toFixed(1)} Hz`);
+        console.log(`  COP: ${data.COP?.toFixed(2)}`);
+        console.log(`  Fault: ${data.fault} (ID: ${data.fault_id})`);
+        console.log(`  Vehicle: ${data.vehicle_name}`);
+        console.log(`  Row: ${data.row_index}`);
+        
+        setTelemetryData(data);
+      } catch (e) {
+        console.error('Error parsing telemetry:', e);
+        console.error('Raw data:', event.data);
+      }
+    };
+
+    ws.onclose = (event) => {
+      console.log('WebSocket DISCONNECTED');
+      console.log(`Code: ${event.code}`);
+      console.log(`Reason: ${event.reason || 'No reason specified'}`);
+      console.log(`Clean: ${event.wasClean}`);
+    };
+
+    ws.onerror = (error) => {
+      console.error('WebSocket ERROR:', error);
+    };
+
+    wsRef.current = ws;
+  };
+
+  const handleStartSimulation = async (trip: TripDTO) => {
+    console.log('========== START SIMULATION ==========');
+    console.log(`Vehicle: ${trip.vehicleName}`);
+    
+    if (activeSimulation) {
+      console.log(`Simulation already active for ${activeSimulation}`);
+      alert(`There is already an active simulation for ${activeSimulation}. Stop it first.`);
+      return;
+    }
+
+    try {
+      setIsStartingSimulation(true);
+
+      console.log('1. Connecting WebSocket...');
+      connectWebSocket(trip.vehicleName);
+
+      console.log('2. Calling API /trip/startSimulation...');
+      const token = localStorage.getItem('jwt');
+      const response = await fetch('http://localhost:8081/api/carrier/trip/startSimulation', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ vehicleName: trip.vehicleName })
+      });
+
+      const responseData = await response.json();
+      console.log('Response:', responseData);
+
+      if (!response.ok) {
+        console.error('Error start simulation:', responseData.message);
+        alert(responseData.message || 'Failed to start simulation');
+        if (wsRef.current) {
+          wsRef.current.close();
+        }
+        return;
+      }
+
+      setActiveSimulation(trip.vehicleName);
+      setShowTelemetryPopup(true);
+      console.log(`Simulation started for ${trip.vehicleName}`);
+      console.log('========================================');
+
+    } catch (err) {
+      console.error('Exception:', err);
+      alert('Failed to start simulation');
+      if (wsRef.current) {
+        wsRef.current.close();
+      }
+    } finally {
+      setIsStartingSimulation(false);
+    }
+  };
+
+  const handleStopSimulation = async () => {
+    console.log('========== STOP SIMULATION ==========');
+    console.log(`Vehicle: ${activeSimulation}`);
+    
+    try {
+      console.log('1. Calling API /trip/stopSimulation...');
+      const token = localStorage.getItem('jwt');
+      const response = await fetch('http://localhost:8081/api/carrier/trip/stopSimulation', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      const responseData = await response.json();
+      console.log('Response:', responseData);
+
+      if (!response.ok) {
+        console.error('Error stop simulation:', responseData.message);
+        alert(responseData.message || 'Failed to stop simulation');
+        return;
+      }
+
+      console.log('2. Closing WebSocket...');
+      if (wsRef.current) {
+        wsRef.current.close();
+        wsRef.current = null;
+      }
+
+      console.log(`Simulation stopped for ${activeSimulation}`);
+      console.log('========================================');
+      
+      setActiveSimulation(null);
+      setTelemetryData(null);
+      setShowTelemetryPopup(false);
+
+    } catch (err) {
+      console.error('Exception:', err);
+      alert('Failed to stop simulation');
+    }
+  };
+
+  // Altre funzioni
+
   const handleShowMap = (trip: TripDTO) => {
     console.log('Selected trip for map:', trip);
     
     setSelectedTripForMap(trip);
     setShowMapPopup(true);
     
-    // Wait for the modal to render, then initialize the map
     setTimeout(() => {
       initializeTripMap(trip);
     }, 100);
@@ -138,13 +388,11 @@ const TripList: React.FC = () => {
       return;
     }
 
-    // Check if coordinates are available
     if (!trip.departureLatLng || !trip.arrivalLatLng) {
       console.error('Missing coordinates for trip', trip);
       return;
     }
 
-    // Center map between departure and arrival
     const centerLat = (trip.departureLatLng.lat + trip.arrivalLatLng.lat) / 2;
     const centerLng = (trip.departureLatLng.lng + trip.arrivalLatLng.lng) / 2;
 
@@ -154,7 +402,6 @@ const TripList: React.FC = () => {
       ...mapOptions
     });
 
-    // Decode and draw the polyline
     if (trip.pathPolyline) {
       const decodedPath = google.maps.geometry.encoding.decodePath(trip.pathPolyline);
       
@@ -167,18 +414,13 @@ const TripList: React.FC = () => {
         map: map
       });
 
-      // Fit map to polyline bounds
       const bounds = new google.maps.LatLngBounds();
       decodedPath.forEach((point: any) => bounds.extend(point));
-      
-      // Extend bounds to include markers
       bounds.extend(new google.maps.LatLng(trip.departureLatLng.lat, trip.departureLatLng.lng));
       bounds.extend(new google.maps.LatLng(trip.arrivalLatLng.lat, trip.arrivalLatLng.lng));
-      
       map.fitBounds(bounds);
     }
 
-    // Add departure marker (green)
     new google.maps.Marker({
       position: { lat: trip.departureLatLng.lat, lng: trip.departureLatLng.lng },
       map: map,
@@ -199,7 +441,6 @@ const TripList: React.FC = () => {
       }
     });
 
-    // Add arrival marker (red)
     new google.maps.Marker({
       position: { lat: trip.arrivalLatLng.lat, lng: trip.arrivalLatLng.lng },
       map: map,
@@ -222,17 +463,14 @@ const TripList: React.FC = () => {
   };
 
   const handleShowShipments = async (trip: TripDTO, index: number) => {
-    // If clicking on the same trip, toggle it closed
     if (expandedTripIndex === index) {
       setExpandedTripIndex(null);
-      // Delay clearing shipments until animation completes (500ms)
       setTimeout(() => {
         setShipments([]);
       }, 500);
       return;
     }
 
-    // Expand this trip and load its shipments
     setExpandedTripIndex(index);
     setCurrentTripPolyline(trip.pathPolyline);
 
@@ -314,7 +552,6 @@ const TripList: React.FC = () => {
 
       alert(responseData.message || 'Shipment deleted successfully!');
       
-      // Remove the deleted shipment from the list
       setShipments(prevShipments => 
         prevShipments.filter(s => s.id !== shipment.id)
       );
@@ -330,7 +567,6 @@ const TripList: React.FC = () => {
     setSelectedShipment(shipment);
     setShowShipmentMapPopup(true);
     
-    // Wait for the modal to render, then initialize the map
     setTimeout(() => {
       initializeMap(shipment);
     }, 100);
@@ -339,13 +575,11 @@ const TripList: React.FC = () => {
   const initializeMap = (shipment: ShipmentDTO) => {
     if (!mapRef.current || !window.google) return;
 
-    // Check if coordinates are available
     if (!shipment.departureLatLng || !shipment.arrivalLatLng) {
       console.error('Missing coordinates for shipment', shipment);
       return;
     }
 
-    // Center map between departure and arrival
     const centerLat = (shipment.departureLatLng.lat + shipment.arrivalLatLng.lat) / 2;
     const centerLng = (shipment.departureLatLng.lng + shipment.arrivalLatLng.lng) / 2;
 
@@ -357,7 +591,6 @@ const TripList: React.FC = () => {
 
     googleMapInstance.current = map;
 
-    // Decode and draw the polyline
     if (currentTripPolyline) {
       const decodedPath = google.maps.geometry.encoding.decodePath(currentTripPolyline);
       
@@ -370,18 +603,13 @@ const TripList: React.FC = () => {
         map: map
       });
 
-      // Fit map to polyline bounds
       const bounds = new google.maps.LatLngBounds();
       decodedPath.forEach((point: any) => bounds.extend(point));
-      
-      // Extend bounds to include markers
       bounds.extend(new google.maps.LatLng(shipment.departureLatLng.lat, shipment.departureLatLng.lng));
       bounds.extend(new google.maps.LatLng(shipment.arrivalLatLng.lat, shipment.arrivalLatLng.lng));
-      
       map.fitBounds(bounds);
     }
 
-    // Add departure marker (green)
     new google.maps.Marker({
       position: { lat: shipment.departureLatLng.lat, lng: shipment.departureLatLng.lng },
       map: map,
@@ -402,7 +630,6 @@ const TripList: React.FC = () => {
       }
     });
 
-    // Add arrival marker (red)
     new google.maps.Marker({
       position: { lat: shipment.arrivalLatLng.lat, lng: shipment.arrivalLatLng.lng },
       map: map,
@@ -482,13 +709,20 @@ const TripList: React.FC = () => {
     <div className="max-w-6xl mx-auto bg-gray-900 text-white p-8 mt-8 rounded-lg shadow-lg">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-3xl font-bold">My Trips</h1>
-        <button
-          onClick={fetchTrips}
-          disabled={isLoading}
-          className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200 disabled:opacity-50"
-        >
-          {isLoading ? 'Loading...' : 'Refresh'}
-        </button>
+        <div className="flex gap-4">
+          {activeSimulation && (
+            <span className="px-4 py-2 bg-green-600 text-white rounded-lg animate-pulse">
+              Live: {activeSimulation}
+            </span>
+          )}
+          <button
+            onClick={fetchTrips}
+            disabled={isLoading}
+            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200 disabled:opacity-50"
+          >
+            {isLoading ? 'Loading...' : 'Refresh'}
+          </button>
+        </div>
       </div>
 
       {isLoading && trips.length === 0 ? (
@@ -511,9 +745,11 @@ const TripList: React.FC = () => {
                   <div className="flex items-center gap-3">
                     <h2 className="text-xl font-bold text-white">{trip.vehicleName}</h2>
                     <span className={`px-2 py-1 text-white text-xs rounded ${
+                      activeSimulation === trip.vehicleName ? 'bg-green-600 animate-pulse' :
                       trip.started ? 'bg-green-600' : 'bg-gray-600'
                     }`}>
-                      {trip.started ? 'Started' : 'Pending'}
+                      {activeSimulation === trip.vehicleName ? 'Streaming' :
+                       trip.started ? 'Started' : 'Pending'}
                     </span>
                     {trip.refrigerated && (
                       <span className="px-2 py-1 bg-blue-600 text-white text-xs rounded">
@@ -521,7 +757,6 @@ const TripList: React.FC = () => {
                       </span>
                     )}
                   </div>
-                  {/* Chevron indicator for expand/collapse */}
                   <svg 
                     className={`w-6 h-6 text-gray-400 transition-transform duration-300 ease-in-out ${
                       expandedTripIndex === index ? 'rotate-180' : ''
@@ -583,24 +818,41 @@ const TripList: React.FC = () => {
                   >
                     View Route
                   </button>
+                  
+                  {/* Pulsanti Start/Stop per simulazione */}
                   {trip.refrigerated && (
                     <>
                       <button
-                        disabled
-                        onClick={(e) => e.stopPropagation()}
-                        className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg opacity-50 cursor-not-allowed"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleStartSimulation(trip);
+                        }}
+                        disabled={activeSimulation !== null || isStartingSimulation}
+                        className={`flex-1 px-4 py-2 text-white rounded-lg transition-colors duration-200 ${
+                          activeSimulation !== null || isStartingSimulation
+                            ? 'bg-blue-600 opacity-50 cursor-not-allowed'
+                            : 'bg-blue-600 hover:bg-blue-700'
+                        }`}
                       >
-                        Start
+                        {isStartingSimulation ? 'Starting...' : 'Start'}
                       </button>
                       <button
-                        disabled
-                        onClick={(e) => e.stopPropagation()}
-                        className="flex-1 px-4 py-2 bg-orange-600 text-white rounded-lg opacity-50 cursor-not-allowed"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleStopSimulation();
+                        }}
+                        disabled={activeSimulation !== trip.vehicleName}
+                        className={`flex-1 px-4 py-2 text-white rounded-lg transition-colors duration-200 ${
+                          activeSimulation !== trip.vehicleName
+                            ? 'bg-orange-600 opacity-50 cursor-not-allowed'
+                            : 'bg-orange-600 hover:bg-orange-700'
+                        }`}
                       >
                         Stop
                       </button>
                     </>
                   )}
+                  
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
@@ -667,7 +919,7 @@ const TripList: React.FC = () => {
                             <div>
                               <p className="text-sm text-gray-400">Dimensions</p>
                               <p className="font-semibold text-sm">
-                                {shipment.width}×{shipment.height}×{shipment.length} cm
+                                {shipment.width}x{shipment.height}x{shipment.length} cm
                               </p>
                             </div>
                             <div>
@@ -715,6 +967,204 @@ const TripList: React.FC = () => {
               </div>
             </div>
           ))}
+        </div>
+      )}
+
+      {/* Telemetry Popup */}
+      {showTelemetryPopup && activeSimulation && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-gray-800 rounded-lg p-6 max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-xl font-bold flex items-center gap-2">
+                <span className="animate-pulse">📡</span> Live Telemetry - {activeSimulation}
+              </h3>
+              <button
+                onClick={() => setShowTelemetryPopup(false)}
+                className="text-gray-400 hover:text-white text-2xl"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            {telemetryData ? (
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm border-collapse">
+                  <thead>
+                    <tr className="bg-gray-700 border-b border-gray-600">
+                      <th className="px-4 py-3 text-left font-semibold text-gray-300">Parameter</th>
+                      <th className="px-4 py-3 text-right font-semibold text-gray-300">Value</th>
+                      <th className="px-4 py-3 text-left font-semibold text-gray-300">Unit</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {/* Time & Fault */}
+                    <tr className="border-b border-gray-700 hover:bg-gray-750">
+                      <td className="px-4 py-2 text-gray-300">⏱ Time</td>
+                      <td className="px-4 py-2 text-right font-semibold text-white">{formatValue(telemetryData.time_min, "min")}</td>
+                      <td className="px-4 py-2 text-gray-400">min</td>
+                    </tr>
+                    <tr className="border-b border-gray-700 hover:bg-gray-750">
+                      <td className="px-4 py-2 text-gray-300">⚠ Fault</td>
+                      <td className="px-4 py-2 text-right">
+                        <span className={`px-2 py-1 rounded text-xs font-semibold ${
+                          telemetryData.fault === 'NORMAL' ? 'bg-green-600 text-white' : 'bg-red-600 text-white'
+                        }`}>
+                          {telemetryData.fault || 'N/A'}
+                        </span>
+                      </td>
+                      <td className="px-4 py-2 text-gray-400">-</td>
+                    </tr>
+                    <tr className="border-b border-gray-700 hover:bg-gray-750">
+                      <td className="px-4 py-2 text-gray-300">🔢 Fault ID</td>
+                      <td className="px-4 py-2 text-right font-semibold text-white">{formatValue(telemetryData.fault_id, "-")}</td>
+                      <td className="px-4 py-2 text-gray-400">-</td>
+                    </tr>
+
+                    {/* Temperatures */}
+                    <tr className="bg-gray-750 border-b border-gray-700">
+                      <td colSpan={3} className="px-4 py-2 font-bold text-blue-400">🌡 TEMPERATURES</td>
+                    </tr>
+                    <tr className="border-b border-gray-700 hover:bg-gray-750">
+                      <td className="px-4 py-2 text-gray-300">T_cab (Control)</td>
+                      <td className="px-4 py-2 text-right font-semibold text-white">{formatValue(telemetryData.T_cab, "C")}</td>
+                      <td className="px-4 py-2 text-gray-400">°C</td>
+                    </tr>
+                    <tr className="border-b border-gray-700 hover:bg-gray-750">
+                      <td className="px-4 py-2 text-gray-300">T_cab_meas (Measured)</td>
+                      <td className="px-4 py-2 text-right font-semibold text-white">{formatValue(telemetryData.T_cab_meas, "C")}</td>
+                      <td className="px-4 py-2 text-gray-400">°C</td>
+                    </tr>
+                    <tr className="border-b border-gray-700 hover:bg-gray-750">
+                      <td className="px-4 py-2 text-gray-300">T_set (Setpoint)</td>
+                      <td className="px-4 py-2 text-right font-semibold text-white">{formatValue(telemetryData.T_set, "C")}</td>
+                      <td className="px-4 py-2 text-gray-400">°C</td>
+                    </tr>
+                    <tr className="border-b border-gray-700 hover:bg-gray-750">
+                      <td className="px-4 py-2 text-gray-300">T_amb (Ambient)</td>
+                      <td className="px-4 py-2 text-right font-semibold text-white">{formatValue(telemetryData.T_amb, "C")}</td>
+                      <td className="px-4 py-2 text-gray-400">°C</td>
+                    </tr>
+                    <tr className="border-b border-gray-700 hover:bg-gray-750">
+                      <td className="px-4 py-2 text-gray-300">T_evap_sat</td>
+                      <td className="px-4 py-2 text-right font-semibold text-white">{formatValue(telemetryData.T_evap_sat, "C")}</td>
+                      <td className="px-4 py-2 text-gray-400">°C</td>
+                    </tr>
+                    <tr className="border-b border-gray-700 hover:bg-gray-750">
+                      <td className="px-4 py-2 text-gray-300">T_cond_sat</td>
+                      <td className="px-4 py-2 text-right font-semibold text-white">{formatValue(telemetryData.T_cond_sat, "C")}</td>
+                      <td className="px-4 py-2 text-gray-400">°C</td>
+                    </tr>
+
+                    {/* Pressures */}
+                    <tr className="bg-gray-750 border-b border-gray-700">
+                      <td colSpan={3} className="px-4 py-2 font-bold text-green-400">📊 PRESSURES</td>
+                    </tr>
+                    <tr className="border-b border-gray-700 hover:bg-gray-750">
+                      <td className="px-4 py-2 text-gray-300">P_suc_bar</td>
+                      <td className="px-4 py-2 text-right font-semibold text-white">{formatValue(telemetryData.P_suc_bar, "bar")}</td>
+                      <td className="px-4 py-2 text-gray-400">bar</td>
+                    </tr>
+                    <tr className="border-b border-gray-700 hover:bg-gray-750">
+                      <td className="px-4 py-2 text-gray-300">P_dis_bar</td>
+                      <td className="px-4 py-2 text-right font-semibold text-white">{formatValue(telemetryData.P_dis_bar, "bar")}</td>
+                      <td className="px-4 py-2 text-gray-400">bar</td>
+                    </tr>
+
+                    {/* Compressor & Performance */}
+                    <tr className="bg-gray-750 border-b border-gray-700">
+                      <td colSpan={3} className="px-4 py-2 font-bold text-yellow-400">⚙ COMPRESSOR & PERFORMANCE</td>
+                    </tr>
+                    <tr className="border-b border-gray-700 hover:bg-gray-750">
+                      <td className="px-4 py-2 text-gray-300">N_comp_Hz</td>
+                      <td className="px-4 py-2 text-right font-semibold text-white">{formatValue(telemetryData.N_comp_Hz, "Hz")}</td>
+                      <td className="px-4 py-2 text-gray-400">Hz</td>
+                    </tr>
+                    <tr className="border-b border-gray-700 hover:bg-gray-750">
+                      <td className="px-4 py-2 text-gray-300">P_comp_W</td>
+                      <td className="px-4 py-2 text-right font-semibold text-white">{formatValue(telemetryData.P_comp_W, "W")}</td>
+                      <td className="px-4 py-2 text-gray-400">W</td>
+                    </tr>
+                    <tr className="border-b border-gray-700 hover:bg-gray-750">
+                      <td className="px-4 py-2 text-gray-300">SH_K (Superheat)</td>
+                      <td className="px-4 py-2 text-right font-semibold text-white">{formatValue(telemetryData.SH_K, "K")}</td>
+                      <td className="px-4 py-2 text-gray-400">K</td>
+                    </tr>
+                    <tr className="border-b border-gray-700 hover:bg-gray-750">
+                      <td className="px-4 py-2 text-gray-300">Q_evap_W</td>
+                      <td className="px-4 py-2 text-right font-semibold text-white">{formatValue(telemetryData.Q_evap_W, "W")}</td>
+                      <td className="px-4 py-2 text-gray-400">W</td>
+                    </tr>
+                    <tr className="border-b border-gray-700 hover:bg-gray-750">
+                      <td className="px-4 py-2 text-gray-300">COP</td>
+                      <td className="px-4 py-2 text-right font-semibold text-white">{formatValue(telemetryData.COP, "-")}</td>
+                      <td className="px-4 py-2 text-gray-400">-</td>
+                    </tr>
+
+                    {/* Status */}
+                    <tr className="bg-gray-750 border-b border-gray-700">
+                      <td colSpan={3} className="px-4 py-2 font-bold text-purple-400">🔧 STATUS</td>
+                    </tr>
+                    <tr className="border-b border-gray-700 hover:bg-gray-750">
+                      <td className="px-4 py-2 text-gray-300">frost_level</td>
+                      <td className="px-4 py-2 text-right font-semibold text-white">{formatValue(telemetryData.frost_level, "%")}</td>
+                      <td className="px-4 py-2 text-gray-400">%</td>
+                    </tr>
+                    <tr className="border-b border-gray-700 hover:bg-gray-750">
+                      <td className="px-4 py-2 text-gray-300">valve_open</td>
+                      <td className="px-4 py-2 text-right font-semibold text-white">{formatValue(telemetryData.valve_open, "%")}</td>
+                      <td className="px-4 py-2 text-gray-400">%</td>
+                    </tr>
+                    <tr className="border-b border-gray-700 hover:bg-gray-750">
+                      <td className="px-4 py-2 text-gray-300">🚪 door_open</td>
+                      <td className="px-4 py-2 text-right">
+                        <span className={`px-2 py-1 rounded text-xs font-semibold ${
+                          telemetryData.door_open ? 'bg-yellow-600 text-white' : 'bg-gray-600 text-white'
+                        }`}>
+                          {telemetryData.door_open ? 'OPEN' : 'CLOSED'}
+                        </span>
+                      </td>
+                      <td className="px-4 py-2 text-gray-400">-</td>
+                    </tr>
+                    <tr className="border-b border-gray-700 hover:bg-gray-750">
+                      <td className="px-4 py-2 text-gray-300">❄ defrost_on</td>
+                      <td className="px-4 py-2 text-right">
+                        <span className={`px-2 py-1 rounded text-xs font-semibold ${
+                          telemetryData.defrost_on ? 'bg-blue-600 text-white' : 'bg-gray-600 text-white'
+                        }`}>
+                          {telemetryData.defrost_on ? 'ON' : 'OFF'}
+                        </span>
+                      </td>
+                      <td className="px-4 py-2 text-gray-400">-</td>
+                    </tr>
+
+                    {/* Other */}
+                    <tr className="bg-gray-750 border-b border-gray-700">
+                      <td colSpan={3} className="px-4 py-2 font-bold text-gray-400">📋 OTHER</td>
+                    </tr>
+                    <tr className="border-b border-gray-700 hover:bg-gray-750">
+                      <td className="px-4 py-2 text-gray-300">run_id</td>
+                      <td className="px-4 py-2 text-right font-semibold text-white">{formatValue(telemetryData.run_id, "-")}</td>
+                      <td className="px-4 py-2 text-gray-400">-</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <div className="text-center py-8">
+                <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mb-2"></div>
+                <p className="text-gray-400">Waiting for telemetry data...</p>
+              </div>
+            )}
+
+            <button
+              onClick={handleStopSimulation}
+              className="mt-6 w-full px-6 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors duration-200 font-medium"
+            >
+              🛑 Stop Simulation
+            </button>
+          </div>
         </div>
       )}
 
