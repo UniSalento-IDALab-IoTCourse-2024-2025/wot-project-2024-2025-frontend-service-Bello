@@ -159,7 +159,9 @@ const TripList: React.FC = () => {
   const googleMapInstance = useRef<any>(null);
 
   // State per simulazione
-  const [activeSimulation, setActiveSimulation] = useState<string | null>(null);
+  const [activeSimulation, setActiveSimulation] = useState<string | null>(() => {
+    return localStorage.getItem('activeSimulation');
+  });
   const [telemetryData, setTelemetryData] = useState<TelemetryData | null>(null);
   const [showTelemetryPopup, setShowTelemetryPopup] = useState(false);
   const [isStartingSimulation, setIsStartingSimulation] = useState(false);
@@ -167,6 +169,13 @@ const TripList: React.FC = () => {
 
   useEffect(() => {
     fetchTrips();
+
+    // Riconnetti il WebSocket se c'è una simulazione attiva
+    const savedSimulation = localStorage.getItem('activeSimulation');
+    if (savedSimulation) {
+      console.log(`🔄 Reconnecting WebSocket for ${savedSimulation}...`);
+      connectWebSocket(savedSimulation);
+    }
 
     return () => {
       if (wsRef.current) {
@@ -312,6 +321,7 @@ const TripList: React.FC = () => {
       }
 
       setActiveSimulation(trip.vehicleName);
+      localStorage.setItem('activeSimulation', trip.vehicleName); 
       setShowTelemetryPopup(true);
       console.log(`Simulation started for ${trip.vehicleName}`);
       console.log('========================================');
@@ -358,8 +368,9 @@ const TripList: React.FC = () => {
 
       console.log(`Simulation stopped for ${activeSimulation}`);
       console.log('========================================');
-      
+
       setActiveSimulation(null);
+      localStorage.removeItem('activeSimulation'); 
       setTelemetryData(null);
       setShowTelemetryPopup(false);
 
