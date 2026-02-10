@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine } from 'recharts';
 
 interface TelemetryData {
@@ -100,41 +100,50 @@ const Dashboard: React.FC = () => {
   const [isConnected, setIsConnected] = useState(false);
   const [activeVehicle, setActiveVehicle] = useState<string | null>(null);
   const [selectedMetric, setSelectedMetric] = useState<keyof TelemetryData>('T_cab');
-  const [rawDataHistory, setRawDataHistory] = useState<ChartDataPoint[]>([]);
   const [latestData, setLatestData] = useState<TelemetryData | null>(null);
   const [yAxisDomain, setYAxisDomain] = useState<[number, number]>([0, 100]);
   const [streamCompleted, setStreamCompleted] = useState(false);
   
   const [latestAnomaly, setLatestAnomaly] = useState<AnomalyData | null>(null);
   const [anomalyDetected, setAnomalyDetected] = useState(false);
-  const [showAnomalyAlert, setShowAnomalyAlert] = useState(false);
   const [anomalyHistory, setAnomalyHistory] = useState<AnomalyData[]>([]);
+
+  // === NUOVO: Accumulo completo dei dati + viewport scorrevole ===
+  const allDataRef = useRef<ChartDataPoint[]>([]); // Tutti i dati accumulati (ref per performance)
+  const [allDataLength, setAllDataLength] = useState(0); // Trigger re-render quando serve
+  const [viewEnd, setViewEnd] = useState(0); // Indice dell'ultimo punto visibile (0 = live/fine)
+  const [isFollowingLive, setIsFollowingLive] = useState(true); // Auto-scroll ai dati più recenti
+  const viewWindow = 60; // Quanti punti mostrare nella finestra
   
-  const maxDataPoints = 60;
   const dataCounterRef = useRef(0);
   const wsRef = useRef<WebSocket | null>(null);
+  const chartContainerRef = useRef<HTMLDivElement>(null);
+  const isDraggingRef = useRef(false);
+  const dragStartXRef = useRef(0);
+  const dragStartViewEndRef = useRef(0);
 
   const metrics: Array<{ key: keyof TelemetryData; label: string; unit: string; color: string }> = [
-    { key: 'T_cab', label: 'Cabin Temperature', unit: 'C', color: '#00ff00' },
-    { key: 'T_cab_meas', label: 'Cabin Temperature (Measured)', unit: 'C', color: '#00ff00' },
-    { key: 'T_set', label: 'Set Temperature', unit: 'C', color: '#00ffff' },
-    { key: 'T_amb', label: 'Ambient Temperature', unit: 'C', color: '#ffff00' },
-    { key: 'T_evap_sat', label: 'Evaporator Saturation Temp', unit: 'C', color: '#ff00ff' },
-    { key: 'T_cond_sat', label: 'Condenser Saturation Temp', unit: 'C', color: '#ff6600' },
-    { key: 'P_suc_bar', label: 'Suction Pressure', unit: 'bar', color: '#00ffff' },
-    { key: 'P_dis_bar', label: 'Discharge Pressure', unit: 'bar', color: '#ff00ff' },
-    { key: 'N_comp_Hz', label: 'Compressor Frequency', unit: 'Hz', color: '#00ff00' },
-    { key: 'P_comp_W', label: 'Compressor Power', unit: 'W', color: '#00ffff' },
-    { key: 'SH_K', label: 'Superheat', unit: 'K', color: '#ff6600' },
-    { key: 'Q_evap_W', label: 'Evaporator Power', unit: 'W', color: '#00ffff' },
-    { key: 'COP', label: 'Coefficient of Performance', unit: '-', color: '#00ff00' },
-    { key: 'frost_level', label: 'Frost Level', unit: '%', color: '#6699ff' },
-    { key: 'valve_open', label: 'Valve Opening', unit: '%', color: '#ff00ff' },
-    { key: 'door_open', label: 'Door Open', unit: 'bool', color: '#ff0000' },
-    { key: 'defrost_on', label: 'Defrost Active', unit: 'bool', color: '#00ffff' },
-    { key: 'run_id', label: 'Run ID', unit: '-', color: '#ff00ff' },
-    { key: 'fault_id', label: 'Fault ID', unit: '-', color: '#ff0000' },
-  ];
+  { key: 'T_cab', label: 'Cabin Temperature', unit: '°C', color: '#00ff00' },
+  { key: 'T_cab_meas', label: 'Cabin Temperature (Measured)', unit: '°C', color: '#00cc00' },
+  { key: 'T_set', label: 'Setpoint Temperature', unit: '°C', color: '#00ffff' },
+  { key: 'T_amb', label: 'Ambient Temperature', unit: '°C', color: '#ffff00' },
+  { key: 'T_evap_sat', label: 'Evaporator Saturation Temp', unit: '°C', color: '#ff00ff' },
+  { key: 'T_cond_sat', label: 'Condenser Saturation Temp', unit: '°C', color: '#ff6600' },
+  { key: 'P_suc_bar', label: 'Suction Pressure', unit: 'bar', color: '#00ffff' },
+  { key: 'P_dis_bar', label: 'Discharge Pressure', unit: 'bar', color: '#ff00ff' },
+  { key: 'N_comp_Hz', label: 'Compressor Frequency', unit: 'Hz', color: '#00ff00' },
+  { key: 'P_comp_W', label: 'Compressor Electrical Power', unit: 'W', color: '#00cccc' },
+  { key: 'SH_K', label: 'Evaporator Superheat', unit: 'K', color: '#ff6600' },
+  { key: 'Q_evap_W', label: 'Evaporator Cooling Power', unit: 'W', color: '#00ffff' },
+  { key: 'COP', label: 'Coefficient of Performance', unit: '-', color: '#00ff00' },
+  { key: 'frost_level', label: 'Frost Level', unit: '-', color: '#6699ff' },
+  { key: 'valve_open', label: 'Expansion Valve Opening', unit: '-', color: '#ff00ff' },
+  { key: 'door_open', label: 'Door Open', unit: 'bool', color: '#ff0000' },
+  { key: 'defrost_on', label: 'Defrost Active', unit: 'bool', color: '#00ffff' },
+  { key: 'run_id', label: 'Simulation Run ID', unit: '-', color: '#ff00ff' },
+  { key: 'fault_id', label: 'Fault ID', unit: '-', color: '#ff0000' },
+];
+
 
   const getMetricColor = () => {
     const metric = metrics.find(m => m.key === selectedMetric);
@@ -146,20 +155,7 @@ const Dashboard: React.FC = () => {
     return metric?.unit || '';
   };
 
-  useEffect(() => {
-    const initialData: ChartDataPoint[] = Array.from({ length: maxDataPoints }, (_, i) => ({
-      idx: i,
-      time: 0,
-      value: null,
-      label: `${i}`,
-      rawData: undefined,
-      isAnomaly: false,
-      reconstructionError: 0,
-    }));
-    setRawDataHistory(initialData);
-    dataCounterRef.current = 0;
-  }, []);
-
+  // WebSocket connection
   useEffect(() => {
     console.log('🔌 WebSocket connection attempt...');
     const ws = new WebSocket('ws://localhost:8081/ws/telemetry');
@@ -175,8 +171,6 @@ const Dashboard: React.FC = () => {
         
         if (data.message_type === 'anomaly') {
           handleAnomalyMessage(data as AnomalyData);
-        } else if (data.message_type === 'telemetry') {
-          handleTelemetryMessage(data as TelemetryData);
         } else {
           handleTelemetryMessage(data as TelemetryData);
         }
@@ -211,35 +205,28 @@ const Dashboard: React.FC = () => {
     
     if (data.anomaly_detected && !anomalyDetected) {
       setAnomalyDetected(true);
-      setShowAnomalyAlert(true);
-      
-      setTimeout(() => {
-        setShowAnomalyAlert(false);
-      }, 5000);
     }
     
     if (!data.anomaly_detected && anomalyDetected) {
       setAnomalyDetected(false);
     }
     
-    setRawDataHistory((prevData) => {
-      const updated = [...prevData];
-      const index = updated.findIndex(p => p.rawData?.row_index === data.row_index);
-      if (index !== -1) {
-        updated[index] = {
-          ...updated[index],
-          isAnomaly: data.anomaly_detected,
-          reconstructionError: data.reconstruction_error
-        };
-      }
-      return updated;
-    });
+    // Aggiorna il punto corrispondente in allDataRef
+    const allData = allDataRef.current;
+    const index = allData.findIndex(p => p.rawData?.row_index === data.row_index);
+    if (index !== -1) {
+      allData[index] = {
+        ...allData[index],
+        isAnomaly: data.anomaly_detected,
+        reconstructionError: data.reconstruction_error
+      };
+      setAllDataLength(prev => prev); // force re-render
+    }
   };
 
   const handleTelemetryMessage = (data: TelemetryData) => {
     if (data.stream_status === 'completed') {
       console.log('🏁 STREAM COMPLETATO - Dashboard');
-      console.log(`   Message: ${data.message || 'Dataset esaurito'}`);
       
       setStreamCompleted(true);
       setIsConnected(false);
@@ -257,26 +244,71 @@ const Dashboard: React.FC = () => {
     setLatestData(data);
     setActiveVehicle(data.vehicle_name || 'Unknown');
 
-    setRawDataHistory((prevData) => {
-      const newPoint: ChartDataPoint = {
-        idx: dataCounterRef.current,
-        time: data.time_min || 0,
-        value: 0,
-        label: `${Math.floor(data.time_min || 0)}m`,
-        rawData: data,
-        isAnomaly: false,
-        reconstructionError: 0,
-      };
+    // === NUOVO: Accumula TUTTI i dati senza buttare via niente ===
+    const newPoint: ChartDataPoint = {
+      idx: dataCounterRef.current,
+      time: data.time_min || 0,
+      value: 0,
+      label: `${Math.floor(data.time_min || 0)}m`,
+      rawData: data,
+      isAnomaly: false,
+      reconstructionError: 0,
+    };
 
-      dataCounterRef.current += 1;
+    dataCounterRef.current += 1;
+    allDataRef.current.push(newPoint);
+    setAllDataLength(allDataRef.current.length);
 
-      const updated = [...prevData.slice(1), newPoint];
-      return updated;
-    });
+    // Se stiamo seguendo il live, aggiorna viewEnd alla fine
+    if (isFollowingLive) {
+      setViewEnd(allDataRef.current.length);
+    }
   };
 
+  // === NUOVO: Calcola la finestra visibile dai dati accumulati ===
+  const visibleData = React.useMemo(() => {
+    const allData = allDataRef.current;
+    const totalLen = allData.length;
+    
+    if (totalLen === 0) {
+      // Dati vuoti: mostra placeholder
+      return Array.from({ length: viewWindow }, (_, i) => ({
+        idx: i,
+        time: 0,
+        value: null,
+        label: `${i}`,
+        rawData: undefined,
+        isAnomaly: false,
+        reconstructionError: 0,
+      }));
+    }
+
+    const end = isFollowingLive ? totalLen : Math.min(viewEnd, totalLen);
+    const start = Math.max(0, end - viewWindow);
+    const slice = allData.slice(start, end);
+
+    // Se la slice è più piccola della finestra, aggiungi placeholder all'inizio
+    const padding = viewWindow - slice.length;
+    const paddedSlice: ChartDataPoint[] = [];
+    
+    for (let i = 0; i < padding; i++) {
+      paddedSlice.push({
+        idx: -padding + i,
+        time: 0,
+        value: null,
+        label: '',
+        rawData: undefined,
+        isAnomaly: false,
+        reconstructionError: 0,
+      });
+    }
+    
+    return [...paddedSlice, ...slice];
+  }, [allDataLength, viewEnd, isFollowingLive, viewWindow]);
+
+  // Mappa i dati visibili con la metrica selezionata
   const chartData = React.useMemo(() => {
-    return rawDataHistory.map(point => {
+    return visibleData.map(point => {
       if (!point.rawData) {
         return { ...point, value: null };
       }
@@ -287,16 +319,20 @@ const Dashboard: React.FC = () => {
         value: Number(metricValue.toFixed(2)),
       };
     });
-  }, [rawDataHistory, selectedMetric]);
+  }, [visibleData, selectedMetric]);
 
+  // Y axis domain basato su TUTTI i dati accumulati (scala fissa, non cambia scrollando)
   useEffect(() => {
-    const validValues = chartData
-      .filter(p => p.value !== null)
-      .map(p => p.value as number);
+    const allData = allDataRef.current;
+    if (allData.length === 0) return;
+
+    const allValues = allData
+      .filter(p => p.rawData)
+      .map(p => Number(p.rawData![selectedMetric]) || 0);
     
-    if (validValues.length > 0) {
-      const min = Math.min(...validValues);
-      const max = Math.max(...validValues);
+    if (allValues.length > 0) {
+      const min = Math.min(...allValues);
+      const max = Math.max(...allValues);
       const padding = (max - min) * 0.1 || 5;
       
       setYAxisDomain([
@@ -304,17 +340,96 @@ const Dashboard: React.FC = () => {
         Math.ceil(max + padding)
       ]);
     }
-  }, [chartData]);
+  }, [allDataLength, selectedMetric]);
+
+  // === NUOVO: Handler per drag e scroll sul grafico ===
+  const handleWheel = useCallback((e: WheelEvent) => {
+    e.preventDefault();
+    const totalLen = allDataRef.current.length;
+    if (totalLen <= viewWindow) return;
+
+    const scrollAmount = Math.sign(e.deltaY) * 3; // 3 punti per scroll tick
+    
+    setIsFollowingLive(false);
+    setViewEnd(prev => {
+      const currentEnd = isFollowingLive ? totalLen : prev;
+      const newEnd = Math.max(viewWindow, Math.min(totalLen, currentEnd + scrollAmount));
+      
+      // Se arriviamo alla fine, riattiva il follow
+      if (newEnd >= totalLen) {
+        setIsFollowingLive(true);
+        return totalLen;
+      }
+      return newEnd;
+    });
+  }, [isFollowingLive, viewWindow]);
+
+  const handleMouseDown = useCallback((e: React.MouseEvent) => {
+    isDraggingRef.current = true;
+    dragStartXRef.current = e.clientX;
+    dragStartViewEndRef.current = isFollowingLive ? allDataRef.current.length : viewEnd;
+    
+    // Cambia cursore
+    if (chartContainerRef.current) {
+      chartContainerRef.current.style.cursor = 'grabbing';
+    }
+  }, [viewEnd, isFollowingLive]);
+
+  const handleMouseMove = useCallback((e: React.MouseEvent) => {
+    if (!isDraggingRef.current) return;
+    
+    const containerWidth = chartContainerRef.current?.clientWidth || 1;
+    const deltaX = e.clientX - dragStartXRef.current;
+    
+    // Converti pixel in punti dati (rapporto: larghezza container = viewWindow punti)
+    const pointsPerPixel = viewWindow / containerWidth;
+    const pointsDelta = Math.round(-deltaX * pointsPerPixel); // Negativo: drag a destra = vai indietro
+    
+    const totalLen = allDataRef.current.length;
+    if (totalLen <= viewWindow) return;
+    
+    const newEnd = Math.max(viewWindow, Math.min(totalLen, dragStartViewEndRef.current + pointsDelta));
+    
+    setIsFollowingLive(newEnd >= totalLen);
+    setViewEnd(newEnd);
+  }, [viewWindow]);
+
+  const handleMouseUp = useCallback(() => {
+    isDraggingRef.current = false;
+    if (chartContainerRef.current) {
+      chartContainerRef.current.style.cursor = 'grab';
+    }
+  }, []);
+
+  const handleMouseLeave = useCallback(() => {
+    if (isDraggingRef.current) {
+      isDraggingRef.current = false;
+      if (chartContainerRef.current) {
+        chartContainerRef.current.style.cursor = 'grab';
+      }
+    }
+  }, []);
+
+  // Registra wheel listener (passive: false per preventDefault)
+  useEffect(() => {
+    const el = chartContainerRef.current;
+    if (!el) return;
+
+    el.addEventListener('wheel', handleWheel, { passive: false });
+    return () => {
+      el.removeEventListener('wheel', handleWheel);
+    };
+  }, [handleWheel]);
+
+  // Vai al live
+  const goToLive = useCallback(() => {
+    setIsFollowingLive(true);
+    setViewEnd(allDataRef.current.length);
+  }, []);
 
   const currentMetric = metrics.find(m => m.key === selectedMetric);
   const currentValue = latestData ? (latestData[selectedMetric] || 0) : 0;
-
-  const filledPoints = chartData.filter(p => p.value !== null).length;
-
-  const validValues = chartData.filter(p => p.value !== null).map(p => p.value as number);
-  const minValue = validValues.length > 0 ? Math.min(...validValues) : 0;
-  const maxValue = validValues.length > 0 ? Math.max(...validValues) : 0;
-  const avgValue = validValues.length > 0 ? validValues.reduce((a, b) => a + b, 0) / validValues.length : 0;
+  const totalPoints = allDataRef.current.length;
 
   const generateGridLines = () => {
     const lines = [];
@@ -325,6 +440,15 @@ const Dashboard: React.FC = () => {
       lines.push(yAxisDomain[0] + step * i);
     }
     return lines;
+  };
+
+  // Calcola il range temporale visibile per il label
+  const getVisibleTimeRange = (): string => {
+    const validPoints = chartData.filter(p => p.rawData);
+    if (validPoints.length === 0) return '—';
+    const firstTime = validPoints[0].time;
+    const lastTime = validPoints[validPoints.length - 1].time;
+    return `${Math.floor(firstTime)}m — ${Math.floor(lastTime)}m`;
   };
 
   return (
@@ -343,27 +467,7 @@ const Dashboard: React.FC = () => {
         </div>
       )}
 
-      {showAnomalyAlert && anomalyDetected && (
-        <div className="fixed top-20 right-4 z-50 bg-red-600 text-white px-6 py-4 rounded-lg shadow-lg animate-fade-in">
-          <div className="flex items-center gap-3">
-            <svg className="w-6 h-6 animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-            </svg>
-            <div>
-              <p className="font-bold">🚨 ANOMALY DETECTED!</p>
-              <p className="text-sm">
-                Reconstruction Error: {latestAnomaly?.reconstruction_error?.toFixed(6)}
-              </p>
-            </div>
-            <button
-              onClick={() => setShowAnomalyAlert(false)}
-              className="ml-4 text-white hover:text-gray-200"
-            >
-              ×
-            </button>
-          </div>
-        </div>
-      )}
+
 
       <div className="max-w-7xl mx-auto">
         <div className="mb-8">
@@ -385,6 +489,12 @@ const Dashboard: React.FC = () => {
               }`}>
                 <div className="w-2 h-2 rounded-full bg-white"></div>
                 Anomaly: <strong>{anomalyDetected ? 'DETECTED' : 'NORMAL'}</strong>
+              </div>
+            )}
+            {/* Indicatore totale punti accumulati */}
+            {totalPoints > 0 && (
+              <div className="px-4 py-2 bg-gray-700 rounded-lg text-sm">
+                📦 Total: <strong>{totalPoints}</strong> data points
               </div>
             )}
           </div>
@@ -506,17 +616,48 @@ const Dashboard: React.FC = () => {
               <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: getMetricColor() }}></div>
               <span className="text-sm font-medium text-gray-300">{currentMetric?.label}</span>
             </div>
-            <div className="text-xs text-gray-500">
-              60 minutes
+            <div className="flex items-center gap-3">
+              <div className="text-xs text-gray-500">
+                {getVisibleTimeRange()}
+              </div>
+              {/* Indicatore LIVE / STORICO + pulsante Go to Live */}
+              {isFollowingLive ? (
+                <span className="text-xs px-2 py-1 bg-green-600 rounded text-white font-semibold animate-pulse">
+                  ● LIVE
+                </span>
+              ) : (
+                <button
+                  onClick={goToLive}
+                  className="text-xs px-3 py-1 bg-blue-600 hover:bg-blue-500 rounded text-white font-semibold transition-colors flex items-center gap-1"
+                >
+                  ▶ Go to Live
+                </button>
+              )}
             </div>
           </div>
 
-          <div className="relative bg-[#0a0a0a] rounded border border-gray-800" style={{ height: '350px' }}>
+          {/* Area grafico con drag/scroll */}
+          <div 
+            ref={chartContainerRef}
+            className="relative bg-[#0a0a0a] rounded border border-gray-800 select-none"
+            style={{ height: '350px', cursor: 'grab' }}
+            onMouseDown={handleMouseDown}
+            onMouseMove={handleMouseMove}
+            onMouseUp={handleMouseUp}
+            onMouseLeave={handleMouseLeave}
+          >
             <div className="absolute right-2 top-0 bottom-0 flex flex-col justify-between text-xs text-gray-500 py-2 z-10">
               <span>{yAxisDomain[1]}</span>
               <span>{Math.round((yAxisDomain[1] + yAxisDomain[0]) / 2)}</span>
               <span>{yAxisDomain[0]}</span>
             </div>
+
+            {/* Hint per drag/scroll quando non live */}
+            {!isFollowingLive && totalPoints > viewWindow && (
+              <div className="absolute top-2 left-1/2 -translate-x-1/2 z-20 text-xs text-gray-500 bg-gray-900 bg-opacity-80 px-3 py-1 rounded pointer-events-none">
+                ← Drag to scroll • Scroll wheel to navigate →
+              </div>
+            )}
 
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart 
@@ -576,6 +717,10 @@ const Dashboard: React.FC = () => {
                     const point = props.payload as ChartDataPoint;
                     const lines = [formatValue(value, getMetricUnit()) + ' ' + getMetricUnit()];
                     
+                    if (point.rawData) {
+                      lines.push(`Time: ${Math.floor(point.time)}m`);
+                    }
+                    
                     if (point.isAnomaly) {
                       lines.push(`⚠️ ANOMALY (Error: ${point.reconstructionError?.toFixed(6)})`);
                     }
@@ -606,48 +751,26 @@ const Dashboard: React.FC = () => {
             </ResponsiveContainer>
           </div>
 
-          <div className="mt-4 grid grid-cols-4 gap-4 text-center">
-            <div className="bg-gray-900 rounded p-3 border border-gray-800">
-              <div className="text-xs text-gray-500 mb-1">Current</div>
-              <div className="text-lg font-bold" style={{ color: getMetricColor() }}>
-                {formatValue(currentValue, getMetricUnit())}
+          {/* Minimap / barra di navigazione visiva */}
+          {totalPoints > viewWindow && (
+            <div className="mt-2 px-2">
+              <div className="relative h-2 bg-gray-800 rounded-full overflow-hidden">
+                {/* Barra che mostra dove sei nel dataset */}
+                <div 
+                  className="absolute h-full bg-blue-600 rounded-full transition-all duration-150"
+                  style={{
+                    left: `${Math.max(0, ((isFollowingLive ? totalPoints : viewEnd) - viewWindow) / Math.max(1, totalPoints - viewWindow)) * 100}%`,
+                    width: `${Math.max(5, (viewWindow / totalPoints) * 100)}%`,
+                  }}
+                />
+              </div>
+              <div className="flex justify-between text-xs text-gray-600 mt-1">
+                <span>0m</span>
+                <span>{Math.floor(allDataRef.current[allDataRef.current.length - 1]?.time || 0)}m</span>
               </div>
             </div>
-            <div className="bg-gray-900 rounded p-3 border border-gray-800">
-              <div className="text-xs text-gray-500 mb-1">Minimum</div>
-              <div className="text-lg font-bold text-blue-400">
-                {formatValue(minValue, getMetricUnit())}
-              </div>
-            </div>
-            <div className="bg-gray-900 rounded p-3 border border-gray-800">
-              <div className="text-xs text-gray-500 mb-1">Maximum</div>
-              <div className="text-lg font-bold text-red-400">
-                {formatValue(maxValue, getMetricUnit())}
-              </div>
-            </div>
-            <div className="bg-gray-900 rounded p-3 border border-gray-800">
-              <div className="text-xs text-gray-500 mb-1">Average</div>
-              <div className="text-lg font-bold text-yellow-400">
-                {formatValue(avgValue, getMetricUnit())}
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div className="mt-4 text-center text-xs text-gray-600">
-          <span>Data Points: {filledPoints}/{maxDataPoints}</span>
-          <span className="mx-3">|</span>
-          <span>Update Interval: ~1 minute</span>
-          <span className="mx-3">|</span>
-          <span>Time Window: 60 minutes</span>
-          {latestAnomaly && (
-            <>
-              <span className="mx-3">|</span>
-              <span className={anomalyDetected ? 'text-red-400 font-semibold' : 'text-green-400'}>
-                Anomalies Detected: {anomalyHistory.filter(a => a.anomaly_detected).length}
-              </span>
-            </>
           )}
+
         </div>
       </div>
     </div>
