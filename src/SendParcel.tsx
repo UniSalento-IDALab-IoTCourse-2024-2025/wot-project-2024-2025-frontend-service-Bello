@@ -60,6 +60,7 @@ interface AddressData {
   lng: number;
 }
 
+
 const SendParcel: React.FC = () => {
   // Address data with coordinates
   const [departureAddress, setDepartureAddress] = useState<AddressData | null>(null);
@@ -302,7 +303,7 @@ const SendParcel: React.FC = () => {
         price: selectedTripData.price // Use the trip's price for the shipment
       }
     };
-
+    console.log('Confirming trip selection with data:', selectedTripDTO);
     try {
       setIsLoading(true);
       console.log('Sending to selectTrip:', JSON.stringify(selectedTripDTO, null, 2));
@@ -404,7 +405,7 @@ const SendParcel: React.FC = () => {
               <div className="mt-2 p-3 bg-gray-800 border border-green-600 rounded-lg">
                 <div className="flex justify-between items-start">
                   <div>
-                    <p className="text-sm text-green-400 font-medium">✓ Address confirmed</p>
+                    <p className="text-sm text-green-400 font-medium">✔ Address confirmed</p>
                     <p className="text-sm text-gray-300 mt-1">{departureAddress.formatted}</p>
                     <p className="text-xs text-gray-500 mt-1">
                       Coordinates: {departureAddress.lat.toFixed(6)}, {departureAddress.lng.toFixed(6)}
@@ -415,7 +416,9 @@ const SendParcel: React.FC = () => {
                     onClick={clearDepartureAddress}
                     className="text-gray-400 hover:text-white text-xl ml-2"
                   >
-                    ×
+                   <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
                   </button>
                 </div>
               </div>
@@ -444,7 +447,7 @@ const SendParcel: React.FC = () => {
               <div className="mt-2 p-3 bg-gray-800 border border-green-600 rounded-lg">
                 <div className="flex justify-between items-start">
                   <div>
-                    <p className="text-sm text-green-400 font-medium">✓ Address confirmed</p>
+                    <p className="text-sm text-green-400 font-medium">✔ Address confirmed</p>
                     <p className="text-sm text-gray-300 mt-1">{arrivalAddress.formatted}</p>
                     <p className="text-xs text-gray-500 mt-1">
                       Coordinates: {arrivalAddress.lat.toFixed(6)}, {arrivalAddress.lng.toFixed(6)}
@@ -455,7 +458,9 @@ const SendParcel: React.FC = () => {
                     onClick={clearArrivalAddress}
                     className="text-gray-400 hover:text-white text-xl ml-2"
                   >
-                    ×
+                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
                   </button>
                 </div>
               </div>
@@ -598,25 +603,25 @@ const SendParcel: React.FC = () => {
                     <p className="text-sm text-gray-400">Duration</p>
                     <p className="font-semibold">{formatDuration(trip.duration)}</p>
                   </div>
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm text-gray-400">Price</p>
-                      <p className="font-semibold">€{trip.price.toFixed(2)}</p>
-                    </div>
-                    <div className="flex gap-2">
-                      {trip.refrigerated && (
-                        <span className="px-3 py-1 bg-blue-600 text-white text-xs rounded">
-                          Refrigerated
-                        </span>
-                      )}
-                      {trip.scheduled && (
-                        <span className="px-3 py-1 bg-yellow-600 text-white text-xs rounded">
-                          Already Scheduled
-                        </span>
-                      )}
-                    </div>
+                  <div>
+                    <p className="text-sm text-gray-400">Price</p>
+                    <p className="font-semibold">€{trip.price.toFixed(2)}</p>
                   </div>
                 </div>
+                {(trip.refrigerated || trip.scheduled) && (
+                  <div className="flex flex-wrap gap-2 mt-3">
+                    {trip.refrigerated && (
+                      <span className="px-3 py-1 bg-blue-600 text-white text-xs rounded">
+                        Refrigerated
+                      </span>
+                    )}
+                    {trip.scheduled && (
+                      <span className="px-3 py-1 bg-yellow-600 text-white text-xs rounded">
+                        Already Scheduled
+                      </span>
+                    )}
+                  </div>
+                )}
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-3 pt-3 border-t border-gray-700">
                   <div>
                     <p className="text-sm text-gray-400">Remaining Width</p>

@@ -27,6 +27,7 @@ interface TripDTO {
 
 interface ShipmentDTO {
   id: string;
+  idTrip: string;
   vehicleName: string;
   departureAddress: string;
   arrivalAddress: string;
@@ -490,6 +491,7 @@ const TripList: React.FC = () => {
       
       const token = localStorage.getItem('jwt');
       const tripDTO = {
+        id: trip.id,
         vehicleName: trip.vehicleName,
         pathPolyline: trip.pathPolyline,
         distanceKm: trip.distanceKm,
@@ -534,6 +536,8 @@ const TripList: React.FC = () => {
       const token = localStorage.getItem('jwt');
 
       const shipmentDTO = {
+        id: shipment.id,
+        idTrip: shipment.idTrip,
         vehicleName: shipment.vehicleName,
         departureAddress: shipment.departureAddress,
         arrivalAddress: shipment.arrivalAddress,
@@ -675,6 +679,7 @@ const TripList: React.FC = () => {
       const token = localStorage.getItem('jwt');
 
       const tripDTO = {
+        id: selectedTripForDelete.id,
         vehicleName: selectedTripForDelete.vehicleName,
         pathPolyline: selectedTripForDelete.pathPolyline,
         distanceKm: selectedTripForDelete.distanceKm,
@@ -719,7 +724,7 @@ const TripList: React.FC = () => {
   return (
     <div className="max-w-6xl mx-auto bg-gray-900 text-white p-8 mt-8 rounded-lg shadow-lg">
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-3xl font-bold">My Trips</h1>
+        <h1 className="text-3xl font-bold">Scheduled Trips</h1>
         <div className="flex gap-4">
           {activeSimulation && (
             <span className="px-4 py-2 bg-green-600 text-white rounded-lg animate-pulse">

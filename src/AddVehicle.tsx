@@ -87,7 +87,7 @@ const AddVehicle: React.FC = () => {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div>
             <label htmlFor="length" className="block mb-2 font-medium">
-              Length (m):
+              Length (cm):
             </label>
             <input
               type="number"
@@ -103,7 +103,7 @@ const AddVehicle: React.FC = () => {
 
           <div>
             <label htmlFor="width" className="block mb-2 font-medium">
-              Width (m):
+              Width (cm):
             </label>
             <input
               type="number"
@@ -119,7 +119,7 @@ const AddVehicle: React.FC = () => {
 
           <div>
             <label htmlFor="height" className="block mb-2 font-medium">
-              Height (m):
+              Height (cm):
             </label>
             <input
               type="number"

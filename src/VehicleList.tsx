@@ -62,6 +62,7 @@ const VehicleList: React.FC = () => {
       const token = localStorage.getItem('jwt');
 
       const vehicleDTO = {
+        id: selectedVehicle.id,
         vehicleName: selectedVehicle.vehicleName,
         isRefrigerated: selectedVehicle.refrigerated,
         width: selectedVehicle.width,
