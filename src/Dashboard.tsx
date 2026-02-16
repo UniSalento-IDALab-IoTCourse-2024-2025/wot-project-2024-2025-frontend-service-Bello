@@ -230,12 +230,13 @@ const Dashboard: React.FC = () => {
       
       setStreamCompleted(true);
       setIsConnected(false);
-      
+      localStorage.removeItem('activeSimulation');
+
       setTimeout(() => {
         setStreamCompleted(false);
         setActiveVehicle(null);
       }, 10000);
-      
+
       return;
     }
     

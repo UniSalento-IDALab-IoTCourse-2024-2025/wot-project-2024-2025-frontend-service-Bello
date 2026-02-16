@@ -597,11 +597,19 @@ const SendParcel: React.FC = () => {
                   </div>
                   <div>
                     <p className="text-sm text-gray-400">Distance</p>
-                    <p className="font-semibold">{trip.distanceKm.toFixed(2)} km</p>
+                    <p className="font-semibold">
+                      {trip.scheduled && serverShipmentDTO
+                        ? serverShipmentDTO.distanceKm.toFixed(2)
+                        : trip.distanceKm.toFixed(2)} km
+                    </p>
                   </div>
                   <div>
                     <p className="text-sm text-gray-400">Duration</p>
-                    <p className="font-semibold">{formatDuration(trip.duration)}</p>
+                    <p className="font-semibold">
+                      {trip.scheduled && serverShipmentDTO
+                        ? formatDuration(serverShipmentDTO.duration)
+                        : formatDuration(trip.duration)}
+                    </p>
                   </div>
                   <div>
                     <p className="text-sm text-gray-400">Price</p>

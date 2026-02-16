@@ -236,16 +236,17 @@ const TripList: React.FC = () => {
       console.log('MESSAGE RECEIVED (raw):', event.data);
       
       try {
-        const data: TelemetryData = JSON.parse(event.data);
+        const data = JSON.parse(event.data);
         
+        if (data.message_type === 'anomaly') {
+          console.log('Anomaly message ignored in TripList');
+          return;
+        }
+
         // Controlla se lo stream e' terminato
         if (data.stream_status === 'completed') {
           console.log('STREAM COMPLETED!');
-          console.log(`Vehicle: ${data.vehicle_name || activeSimulation}`);
-          console.log(`Message: ${data.message || 'Dataset finished'}`);
-          
-          alert(`Stream completed for ${data.vehicle_name || activeSimulation}!\n${data.message || 'All data has been transmitted.'}`);
-          
+          alert(`Stream completed for ${data.vehicle_name || activeSimulation}!`);
           handleStopSimulation();
           return;
         }
@@ -264,7 +265,6 @@ const TripList: React.FC = () => {
         setTelemetryData(data);
       } catch (e) {
         console.error('Error parsing telemetry:', e);
-        console.error('Raw data:', event.data);
       }
     };
 
