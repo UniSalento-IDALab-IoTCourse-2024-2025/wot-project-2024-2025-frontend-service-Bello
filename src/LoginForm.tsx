@@ -37,7 +37,17 @@ export default function CarrierManagerLoginForm({ onLogin }: CarrierManagerLogin
         return;
       }
 
-      const jwt = responseData.body?.jwt || responseData.body;
+      // DEBUG: stampa la risposta completa
+      console.log("Response data:", responseData);
+
+      // Estrai JWT e ruolo dalla risposta
+      const authResponse = responseData.body;
+      const jwt = authResponse?.jwt;
+      const role = authResponse?.role;
+
+      console.log("Auth response:", authResponse);
+      console.log("JWT:", jwt);
+      console.log("Role:", role);
 
       if (!jwt) {
         showToast("Authentication failed: No token received");
@@ -46,7 +56,14 @@ export default function CarrierManagerLoginForm({ onLogin }: CarrierManagerLogin
 
       onLogin(jwt);
       localStorage.setItem("email", email);
-      navigate("/add-vehicle");
+      localStorage.setItem("role", role || "CLIENT");
+      
+      // Naviga al percorso giusto in base al ruolo
+      if (role === "TECHNICIAN") {
+        navigate("/dashboard");
+      } else {
+        navigate("/trip-list");
+      }
     } catch (err) {
       console.error(err);
       showToast("Failed to communicate with the server");

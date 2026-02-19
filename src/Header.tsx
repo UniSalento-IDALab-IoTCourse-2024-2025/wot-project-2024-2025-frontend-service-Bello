@@ -8,7 +8,7 @@ interface HeaderProps {
 
 export default function Header({ isLoggedIn, onLogout }: HeaderProps) {
   const navigate = useNavigate();
-  const userType = localStorage.getItem("userType");
+  const userRole = localStorage.getItem("role");
   const { isDark, toggleTheme } = useTheme();
 
   const handleLogout = () => {
@@ -43,7 +43,7 @@ export default function Header({ isLoggedIn, onLogout }: HeaderProps) {
                     Send a Parcel
                   </a>
                   <a
-                    href="/login-carrier-manager"
+                    href="/login"
                     className="px-4 py-2 text-sm font-medium text-white bg-primary-600 hover:bg-primary-700 rounded-lg shadow-sm transition-colors"
                   >
                     Login
@@ -51,14 +51,17 @@ export default function Header({ isLoggedIn, onLogout }: HeaderProps) {
                 </>
               ) : (
                 <>
-                  {userType === "carrierManager" && (
+                  {userRole === "TECHNICIAN" ? (
+                    // TECHNICIAN vede solo Dashboard
+                    <a
+                      href="/dashboard"
+                      className="px-3 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-primary-600 dark:hover:text-primary-400 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
+                    >
+                      Dashboard
+                    </a>
+                  ) : (
+                    // ADMIN vede Add Vehicle, Vehicles, Trips
                     <>
-                      <a
-                        href="/dashboard"
-                        className="px-3 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-primary-600 dark:hover:text-primary-400 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
-                      >
-                        Dashboard
-                      </a>
                       <a
                         href="/add-vehicle"
                         className="px-3 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-primary-600 dark:hover:text-primary-400 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"

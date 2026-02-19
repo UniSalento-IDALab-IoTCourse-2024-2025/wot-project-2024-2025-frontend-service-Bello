@@ -5,7 +5,7 @@ import AddVehicle from "./AddVehicle";
 import VehicleList from "./VehicleList";
 import TripList from "./TripList";
 import Dashboard from "./Dashboard";
-import CarrierManagerLoginForm from "./CarrierManagerLoginForm";
+import LoginForm from "./LoginForm";
 import SendParcel from "./SendParcel";
 import HomePage from "./HomePage";
 
@@ -24,6 +24,7 @@ export const useTheme = () => useContext(ThemeContext);
 
 export default function App() {
   const [isLoggedIn, setIsLoggedIn] = useState<boolean>(false);
+  const [userRole, setUserRole] = useState<string | null>(null);
   const [isDark, setIsDark] = useState<boolean>(() => {
     const saved = localStorage.getItem("theme");
     if (saved) return saved === "dark";
@@ -45,14 +46,17 @@ export default function App() {
 
   useEffect(() => {
     const token = localStorage.getItem("jwt");
+    const role = localStorage.getItem("role");
     if (token) {
       setIsLoggedIn(true);
+      setUserRole(role);
     }
   }, []);
 
-  const handleLoginCarrierManager = (token: string) => {
+  const handleLogin = (token: string) => {
     localStorage.setItem("jwt", token);
-    localStorage.setItem("userType", "carrierManager");
+    const role = localStorage.getItem("role");
+    setUserRole(role);
     setIsLoggedIn(true);
   };
 
@@ -60,7 +64,9 @@ export default function App() {
     localStorage.removeItem("jwt");
     localStorage.removeItem("userType");
     localStorage.removeItem("email");
+    localStorage.removeItem("role");
     setIsLoggedIn(false);
+    setUserRole(null);
   };
 
   return (
@@ -72,18 +78,25 @@ export default function App() {
             <Routes>
               <Route path="/" element={<HomePage />} />
               <Route
-                path="/login-carrier-manager"
+                path="/login"
                 element={
-                  <CarrierManagerLoginForm
-                    onLogin={handleLoginCarrierManager}
+                  <LoginForm
+                    onLogin={handleLogin}
                   />
                 }
               />
-              <Route path="/add-vehicle" element={<AddVehicle />} />
-              <Route path="/dashboard" element={<Dashboard />} />
-              <Route path="/send-parcel" element={<SendParcel />} />
-              <Route path="/vehicle-list" element={<VehicleList />} />
-              <Route path="/trip-list" element={<TripList />} />
+              {userRole === "TECHNICIAN" ? (
+                // TECHNICIAN vede SOLO il Dashboard
+                <Route path="/dashboard" element={<Dashboard />} />
+              ) : (
+                // ADMIN vede tutto il resto
+                <>
+                  <Route path="/add-vehicle" element={<AddVehicle />} />
+                  <Route path="/send-parcel" element={<SendParcel />} />
+                  <Route path="/vehicle-list" element={<VehicleList />} />
+                  <Route path="/trip-list" element={<TripList />} />
+                </>
+              )}
             </Routes>
           </main>
         </div>

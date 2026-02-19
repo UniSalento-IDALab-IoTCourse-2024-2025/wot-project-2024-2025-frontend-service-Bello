@@ -31,10 +31,10 @@ export default function HomePage() {
             </svg>
           </a>
           <a
-            href="/login-carrier-manager"
+            href="/login"
             className="inline-flex items-center justify-center px-6 py-3 text-base font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl shadow-sm transition-colors"
           >
-            Carrier Manager Login
+            Login
           </a>
         </div>
       </div>
