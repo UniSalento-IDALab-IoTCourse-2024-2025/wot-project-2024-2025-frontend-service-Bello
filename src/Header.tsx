@@ -4,9 +4,10 @@ import { useTheme } from "./App";
 interface HeaderProps {
   isLoggedIn: boolean;
   onLogout: () => void;
+  unreadNotifications?: number;
 }
 
-export default function Header({ isLoggedIn, onLogout }: HeaderProps) {
+export default function Header({ isLoggedIn, onLogout, unreadNotifications = 0 }: HeaderProps) {
   const navigate = useNavigate();
   const userRole = localStorage.getItem("role");
   const { isDark, toggleTheme } = useTheme();
@@ -52,15 +53,33 @@ export default function Header({ isLoggedIn, onLogout }: HeaderProps) {
               ) : (
                 <>
                   {userRole === "TECHNICIAN" ? (
-                    // TECHNICIAN vede solo Dashboard
-                    <a
-                      href="/dashboard"
-                      className="px-3 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-primary-600 dark:hover:text-primary-400 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
-                    >
-                      Dashboard
-                    </a>
+                    <>
+                      <a
+                        href="/vehicle-monitor"
+                        className="px-3 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-primary-600 dark:hover:text-primary-400 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
+                      >
+                        Monitor
+                      </a>
+
+                      {/* Notification bell with badge */}
+                      <a
+                        href="/notifications"
+                        className="relative px-3 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-primary-600 dark:hover:text-primary-400 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors flex items-center gap-1.5"
+                      >
+                        <div className="relative">
+                          <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" strokeWidth={1.8} stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M14.857 17.082a23.848 23.848 0 0 0 5.454-1.31A8.967 8.967 0 0 1 18 9.75V9A6 6 0 0 0 6 9v.75a8.967 8.967 0 0 1-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 0 1-5.714 0m5.714 0a3 3 0 1 1-5.714 0" />
+                          </svg>
+                          {unreadNotifications > 0 && (
+                            <span className="absolute -top-1.5 -right-1.5 min-w-[16px] h-4 px-1 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center leading-none">
+                              {unreadNotifications > 99 ? "99+" : unreadNotifications}
+                            </span>
+                          )}
+                        </div>
+                        Notifications
+                      </a>
+                    </>
                   ) : (
-                    // ADMIN vede Add Vehicle, Vehicles, Trips
                     <>
                       <a
                         href="/add-vehicle"
