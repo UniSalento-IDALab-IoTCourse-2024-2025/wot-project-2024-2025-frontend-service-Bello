@@ -60,7 +60,7 @@ export default function CarrierManagerLoginForm({ onLogin }: CarrierManagerLogin
       
       // Naviga al percorso giusto in base al ruolo
       if (role === "TECHNICIAN") {
-        navigate("/dashboard");
+        navigate("/vehicle-monitor");
       } else {
         navigate("/trip-list");
       }

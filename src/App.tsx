@@ -4,7 +4,6 @@ import Header from "./Header";
 import AddVehicle from "./AddVehicle";
 import VehicleList from "./VehicleList";
 import TripList from "./TripList";
-import Dashboard from "./Dashboard";
 import LoginForm from "./LoginForm";
 import SendParcel from "./SendParcel";
 import HomePage from "./HomePage";
@@ -26,7 +25,9 @@ export const useTheme = () => useContext(ThemeContext);
 
 export default function App() {
   const [isLoggedIn, setIsLoggedIn] = useState<boolean>(false);
-  const [userRole, setUserRole] = useState<string | null>(null);
+  const [userRole, setUserRole] = useState<string | null>(
+    () => localStorage.getItem("role")  
+  );
   const [unreadNotifications, setUnreadNotifications] = useState<number>(0);
   const [isDark, setIsDark] = useState<boolean>(() => {
     const saved = localStorage.getItem("theme");
@@ -49,13 +50,12 @@ export default function App() {
 
   useEffect(() => {
     const token = localStorage.getItem("jwt");
-    const role = localStorage.getItem("role");
     if (token) {
       setIsLoggedIn(true);
-      setUserRole(role);
     }
   }, []);
 
+  
   // Poll unread notifications count for Technician
   useEffect(() => {
     if (!isLoggedIn || userRole !== "TECHNICIAN") return;
@@ -63,7 +63,7 @@ export default function App() {
     const fetchUnreadCount = async () => {
       try {
         const token = localStorage.getItem("jwt");
-        const res = await fetch("/api/carrier/notifications", {
+        const res = await fetch("http://localhost:8081/api/carrier/notifications", {
           headers: { Authorization: `Bearer ${token}` },
         });
         const data = await res.json();
@@ -108,29 +108,13 @@ export default function App() {
           <main className="pb-12">
             <Routes>
               <Route path="/" element={<HomePage />} />
-              <Route
-                path="/login"
-                element={<LoginForm onLogin={handleLogin} />}
-              />
-              {userRole === "TECHNICIAN" ? (
-                <>
-                  <Route path="/dashboard" element={<Dashboard />} />
-                  <Route path="/vehicle-monitor" element={<VehicleMonitor />} />
-                  <Route
-                    path="/notifications"
-                    element={
-                      <Notifications onUnreadCountChange={setUnreadNotifications} />
-                    }
-                  />
-                </>
-              ) : (
-                <>
-                  <Route path="/add-vehicle" element={<AddVehicle />} />
-                  <Route path="/send-parcel" element={<SendParcel />} />
-                  <Route path="/vehicle-list" element={<VehicleList />} />
-                  <Route path="/trip-list" element={<TripList />} />
-                </>
-              )}
+              <Route path="/login" element={<LoginForm onLogin={handleLogin} />} />
+              <Route path="/vehicle-monitor" element={<VehicleMonitor />} />
+              <Route path="/notifications" element={<Notifications onUnreadCountChange={setUnreadNotifications} />} />
+              <Route path="/add-vehicle" element={<AddVehicle />} />
+              <Route path="/send-parcel" element={<SendParcel />} />
+              <Route path="/vehicle-list" element={<VehicleList />} />
+              <Route path="/trip-list" element={<TripList />} />
             </Routes>
           </main>
         </div>
