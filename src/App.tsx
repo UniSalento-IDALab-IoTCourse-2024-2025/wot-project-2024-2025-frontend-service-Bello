@@ -67,7 +67,7 @@ export default function App() {
           headers: { Authorization: `Bearer ${token}` },
         });
         const data = await res.json();
-        const unread = (data.data || []).filter((n: { read: boolean }) => !n.read).length;
+        const unread = (data.body || []).filter((n: { read: boolean }) => !n.read).length;
         setUnreadNotifications(unread);
       } catch (e) {
         console.error("Error fetching unread count:", e);
@@ -99,7 +99,7 @@ export default function App() {
   return (
     <ThemeContext.Provider value={{ isDark, toggleTheme }}>
       <Router>
-        <div className="min-h-screen bg-gray-50 dark:bg-gray-950 transition-colors">
+        <div className="min-h-screen bg-gray-300 dark:bg-gray-950 transition-colors">
           <Header
             isLoggedIn={isLoggedIn}
             onLogout={handleLogout}
