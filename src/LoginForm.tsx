@@ -54,9 +54,9 @@ export default function CarrierManagerLoginForm({ onLogin }: CarrierManagerLogin
         return;
       }
 
-      onLogin(jwt);
       localStorage.setItem("email", email);
       localStorage.setItem("role", role || "CLIENT");
+      onLogin(jwt);
       
       // Naviga al percorso giusto in base al ruolo
       if (role === "TECHNICIAN") {
@@ -75,10 +75,10 @@ export default function CarrierManagerLoginForm({ onLogin }: CarrierManagerLogin
   return (
     <div className="min-h-[calc(100vh-4rem)] flex items-center justify-center px-4 py-12 w-full">
       <div className="w-full max-w-lg">
-        <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-xl shadow-gray-200/50 dark:shadow-none border border-gray-200 dark:border-gray-800 p-8">
+        <div className="bg-white dark:bg-gray-900 rounded-2xl border-2 border-gray-500 dark:border-gray-600 p-8">
           {/* Header */}
           <div className="text-center mb-8">
-            <div className="mx-auto mb-4 w-12 h-12 rounded-xl bg-primary-100 dark:bg-primary-950/50 flex items-center justify-center">
+            <div className="mx-auto mb-4 w-12 h-12 rounded-xl bg-primary-100 dark:bg-primary-950/50 border-2 border-primary-300 dark:border-transparent flex items-center justify-center">
               <svg className="w-6 h-6 text-primary-600 dark:text-primary-400" fill="none" viewBox="0 0 24 24" strokeWidth={1.8} stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 5.25a3 3 0 0 1 3 3m3 0a6 6 0 0 1-7.029 5.912c-.563-.097-1.159.026-1.563.43L10.5 17.25H8.25v2.25H6v2.25H2.25v-2.818c0-.597.237-1.17.659-1.591l6.499-6.499c.404-.404.527-1 .43-1.563A6 6 0 1 1 21.75 8.25Z" />
               </svg>
@@ -103,7 +103,7 @@ export default function CarrierManagerLoginForm({ onLogin }: CarrierManagerLogin
                 placeholder="you@example.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="w-full px-4 py-2.5 rounded-xl border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-shadow"
+                className="w-full px-4 py-2.5 rounded-xl border-2 border-gray-500 dark:border-gray-500 bg-white dark:bg-gray-800/50 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-shadow"
               />
             </div>
             <div>
@@ -116,13 +116,13 @@ export default function CarrierManagerLoginForm({ onLogin }: CarrierManagerLogin
                 placeholder="Enter your password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full px-4 py-2.5 rounded-xl border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-shadow"
+                className="w-full px-4 py-2.5 rounded-xl border-2 border-gray-500 dark:border-gray-500 bg-white dark:bg-gray-800/50 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-shadow"
               />
             </div>
             <button
               type="submit"
               disabled={isLoading}
-              className="w-full px-6 py-3 bg-primary-600 hover:bg-primary-700 text-white font-medium rounded-xl shadow-lg shadow-primary-600/20 hover:shadow-xl hover:shadow-primary-600/30 transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none"
+              className="w-full px-6 py-3 bg-primary-600 hover:bg-primary-700 text-white font-medium rounded-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isLoading ? (
                 <span className="flex items-center justify-center gap-2">

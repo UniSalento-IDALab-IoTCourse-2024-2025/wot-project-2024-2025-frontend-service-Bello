@@ -109,7 +109,7 @@ export default function Notifications({ onUnreadCountChange }: { onUnreadCountCh
 
         <div className="flex items-center gap-3">
           {/* Filter tabs */}
-          <div className="flex gap-1 p-1 bg-gray-100 dark:bg-gray-800 rounded-lg">
+          <div className="flex gap-1 p-1 bg-gray-200 dark:bg-gray-800 rounded-lg">
             {(["all", "unread", "read"] as const).map((f) => (
               <button
                 key={f}
@@ -134,7 +134,7 @@ export default function Notifications({ onUnreadCountChange }: { onUnreadCountCh
           {unreadCount > 0 && (
             <button
               onClick={markAllAsRead}
-              className="px-4 py-1.5 text-xs font-medium text-primary-600 dark:text-primary-400 hover:bg-primary-50 dark:hover:bg-primary-950/30 rounded-lg transition-colors border border-primary-200 dark:border-primary-800"
+              className="px-4 py-1.5 text-xs font-medium text-primary-600 dark:text-primary-400 hover:bg-primary-50 dark:hover:bg-primary-950/30 rounded-lg transition-colors border-2 border-primary-400 dark:border-primary-800"
             >
               Mark all as read
             </button>
@@ -155,12 +155,12 @@ export default function Notifications({ onUnreadCountChange }: { onUnreadCountCh
           <p className="text-sm">No notifications</p>
         </div>
       ) : (
-        <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 shadow-sm overflow-hidden">
+        <div className="bg-white dark:bg-gray-900 rounded-2xl border-2 border-gray-500 dark:border-gray-600 overflow-hidden">
           {/* Desktop Table */}
           <div className="hidden md:block overflow-x-auto">
             <table className="w-full">
               <thead>
-                <tr className="border-b border-gray-100 dark:border-gray-800/60">
+                <tr className="border-b-2 border-gray-400 dark:border-gray-600/60">
                   <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider w-10">Status</th>
                   <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Vehicle</th>
                   <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Date</th>
@@ -169,7 +169,7 @@ export default function Notifications({ onUnreadCountChange }: { onUnreadCountCh
                   <th className="px-6 py-4 w-24"></th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-50 dark:divide-gray-800/40">
+              <tbody className="divide-y divide-gray-300 dark:divide-gray-600/40">
                 {filtered.map((n) => (
                   <tr
                     key={n.id}
@@ -229,7 +229,7 @@ export default function Notifications({ onUnreadCountChange }: { onUnreadCountCh
           </div>
 
           {/* Mobile Cards */}
-          <div className="md:hidden divide-y divide-gray-100 dark:divide-gray-800/60">
+          <div className="md:hidden divide-y divide-gray-300 dark:divide-gray-600/60">
             {filtered.map((n) => (
               <div
                 key={n.id}

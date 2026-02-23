@@ -69,15 +69,15 @@ const AddVehicle: React.FC = () => {
   };
 
   const inputClass =
-    "w-full px-4 py-2.5 rounded-xl border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-shadow";
+    "w-full px-4 py-2.5 rounded-xl border-2 border-gray-500 dark:border-gray-500 bg-white dark:bg-gray-800/50 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-shadow";
 
   return (
     <div className="w-full px-4 sm:px-6 lg:px-8 py-10">
-      <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-xl shadow-gray-200/50 dark:shadow-none border border-gray-200 dark:border-gray-800 p-8">
+      <div className="bg-white dark:bg-gray-900 rounded-2xl border-2 border-gray-500 dark:border-gray-600 p-8">
         {/* Header */}
         <div className="mb-8">
           <div className="flex items-center gap-3 mb-2">
-            <div className="w-10 h-10 rounded-xl bg-primary-100 dark:bg-primary-950/50 flex items-center justify-center">
+            <div className="w-10 h-10 rounded-xl bg-primary-100 dark:bg-primary-950/50 border-2 border-primary-300 dark:border-transparent flex items-center justify-center">
               <svg className="w-5 h-5 text-primary-600 dark:text-primary-400" fill="none" viewBox="0 0 24 24" strokeWidth={1.8} stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
               </svg>
@@ -179,7 +179,7 @@ const AddVehicle: React.FC = () => {
           </div>
 
           {/* Refrigeration Toggle */}
-          <div className="lg:col-span-2 flex items-center gap-3 p-4 rounded-xl bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700">
+          <div className="lg:col-span-2 flex items-center gap-3 p-4 rounded-xl bg-white dark:bg-gray-800/50 border-2 border-gray-500 dark:border-gray-500">
             <input
               type="checkbox"
               id="hasRefrigeration"
@@ -211,7 +211,7 @@ const AddVehicle: React.FC = () => {
           <button
             type="submit"
             disabled={isLoading}
-            className="lg:col-span-2 w-full px-6 py-3 bg-primary-600 hover:bg-primary-700 text-white font-medium rounded-xl shadow-lg shadow-primary-600/20 hover:shadow-xl hover:shadow-primary-600/30 transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none"
+            className="lg:col-span-2 w-full px-6 py-3 bg-primary-600 hover:bg-primary-700 text-white font-medium rounded-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {isLoading ? (
               <span className="flex items-center justify-center gap-2">
@@ -234,7 +234,7 @@ const AddVehicle: React.FC = () => {
       {/* Success Modal */}
       {showSuccess && (
         <div className="fixed inset-0 bg-black/40 dark:bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-white dark:bg-gray-900 rounded-3xl border border-gray-200 dark:border-gray-800 shadow-2xl p-8 max-w-md w-full animate-fade-in text-center">
+          <div className="bg-white dark:bg-gray-900 rounded-3xl border-2 border-gray-500 dark:border-gray-600 p-8 max-w-md w-full animate-fade-in text-center">
             <div className="mx-auto mb-6 w-20 h-20 rounded-full bg-green-100 dark:bg-green-950/30 flex items-center justify-center">
               <svg className="w-10 h-10 text-green-600 dark:text-green-400" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" />
@@ -244,7 +244,7 @@ const AddVehicle: React.FC = () => {
             <p className="text-gray-500 dark:text-gray-400 mb-8">Your vehicle has been successfully registered in your fleet.</p>
             <button
               onClick={() => setShowSuccess(false)}
-              className="w-full px-6 py-3 bg-primary-600 hover:bg-primary-700 text-white font-semibold rounded-xl shadow-lg shadow-primary-600/20 transition-all"
+              className="w-full px-6 py-3 bg-primary-600 hover:bg-primary-700 text-white font-semibold rounded-xl transition-all"
             >
               Got it
             </button>

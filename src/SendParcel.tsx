@@ -315,95 +315,65 @@ const SendParcel: React.FC = () => {
   };
 
   const inputClass =
-    "w-full px-4 py-2.5 rounded-xl border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-shadow disabled:opacity-50";
+    "w-full px-4 py-2.5 rounded-xl border-2 border-gray-500 dark:border-gray-500 bg-white dark:bg-gray-800/50 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-shadow disabled:opacity-50";
 
   // Split trips into dedicated and scheduled
   const dedicatedTrips = trips.filter((t) => !t.scheduled);
   const scheduledTrips = trips.filter((t) => t.scheduled);
 
-  // Render a single trip card
-  const renderTripCard = (trip: TripDTO, globalIndex: number) => {
+  // Render a single trip row
+  const renderTripRow = (trip: TripDTO, globalIndex: number) => {
     const isSelected = selectedTrip === globalIndex;
-    const distance = trip.scheduled && serverShipmentDTO
-      ? serverShipmentDTO.distanceKm
-      : trip.distanceKm;
-    const duration = trip.scheduled && serverShipmentDTO
-      ? serverShipmentDTO.duration
-      : trip.duration;
 
     return (
       <div
         key={trip.id || globalIndex}
         onClick={() => setSelectedTrip(globalIndex)}
-        className={`group relative p-5 rounded-2xl border-2 cursor-pointer transition-all duration-200 ${
+        className={`flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-0 p-4 cursor-pointer transition-all border-b-2 last:border-b-0 ${
           isSelected
-            ? 'border-primary-500 bg-primary-50 dark:bg-primary-950/20 shadow-lg shadow-primary-500/10'
-            : 'border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 hover:border-primary-300 dark:hover:border-primary-700 hover:shadow-md'
+            ? 'bg-primary-50 dark:bg-primary-950/20 border-primary-200 dark:border-primary-800'
+            : 'bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800/50'
         }`}
       >
-        {/* Selection indicator */}
-        <div className={`absolute top-4 right-4 w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all ${
-          isSelected
-            ? 'border-primary-500 bg-primary-500'
-            : 'border-gray-300 dark:border-gray-600 group-hover:border-primary-400'
-        }`}>
-          {isSelected && (
-            <svg className="w-3.5 h-3.5 text-white" fill="none" viewBox="0 0 24 24" strokeWidth={3} stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" />
-            </svg>
-          )}
-        </div>
-
-        {/* Top row: vehicle + tags */}
-        <div className="flex items-center gap-3 mb-4 pr-10">
-          <div className="w-10 h-10 rounded-xl bg-gray-100 dark:bg-gray-800 flex items-center justify-center flex-shrink-0">
-            <svg className="w-5 h-5 text-gray-600 dark:text-gray-400" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 18.75a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m3 0h6m-9 0H3.375a1.125 1.125 0 0 1-1.125-1.125V14.25m17.25 4.5a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m3 0h1.125c.621 0 1.129-.504 1.09-1.124a17.902 17.902 0 0 0-3.213-9.193 2.056 2.056 0 0 0-1.58-.86H14.25M16.5 18.75h-2.25m0-11.177v-.958c0-.568-.422-1.048-.987-1.106a48.554 48.554 0 0 0-10.026 0 1.106 1.106 0 0 0-.987 1.106v7.635m12-6.677v6.677m0 4.5v-4.5m0 0h-12" />
-            </svg>
-          </div>
-          <div>
-            <p className="font-semibold text-gray-900 dark:text-white">{trip.vehicleName}</p>
-            <div className="flex items-center gap-2 mt-0.5">
-              {trip.refrigerated && (
-                <span className="inline-flex items-center gap-1 text-xs text-blue-600 dark:text-blue-400">
-                  <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 3v2.25m6.364.386-1.591 1.591M21 12h-2.25m-.386 6.364-1.591-1.591M12 18.75V21m-4.773-4.227-1.591 1.591M5.25 12H3m4.227-4.773L5.636 5.636" />
-                  </svg>
-                  Refrigerated
-                </span>
-              )}
-            </div>
+        {/* Radio indicator */}
+        <div className="flex items-center gap-3 sm:w-[40px] flex-shrink-0">
+          <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all ${
+            isSelected
+              ? 'border-primary-500 bg-primary-500'
+              : 'border-gray-400 dark:border-gray-500'
+          }`}>
+            {isSelected && (
+              <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" strokeWidth={3} stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" />
+              </svg>
+            )}
           </div>
         </div>
 
-        {/* Info grid */}
-        <div className="grid grid-cols-3 gap-4">
-          <div className="bg-gray-50 dark:bg-gray-800/50 rounded-xl p-3 text-center">
-            <p className="text-xs text-gray-500 dark:text-gray-400 mb-0.5">Arrival</p>
-            <p className="text-sm font-semibold text-gray-900 dark:text-white">
-              {new Date(trip.arrivalDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}
-            </p>
-          </div>
-          <div className="bg-gray-50 dark:bg-gray-800/50 rounded-xl p-3 text-center">
-            <p className="text-xs text-gray-500 dark:text-gray-400 mb-0.5">Distance</p>
-            <p className="text-sm font-semibold text-gray-900 dark:text-white">
-              {distance.toFixed(0)} km
-            </p>
-          </div>
-          <div className="bg-gray-50 dark:bg-gray-800/50 rounded-xl p-3 text-center">
-            <p className="text-xs text-gray-500 dark:text-gray-400 mb-0.5">Duration</p>
-            <p className="text-sm font-semibold text-gray-900 dark:text-white">
-              {formatDuration(duration)}
-            </p>
-          </div>
-        </div>
-
-        {/* Price - bottom */}
-        <div className="mt-4 pt-4 border-t border-gray-100 dark:border-gray-800 flex items-center justify-between">
-          <p className="text-xs text-gray-500 dark:text-gray-400">Total price</p>
+        {/* Price — most important */}
+        <div className="sm:w-[120px] flex-shrink-0">
+          <p className="text-xs text-gray-500 dark:text-gray-400 sm:hidden">Price</p>
           <p className="text-xl font-bold text-primary-600 dark:text-primary-400">
             €{trip.price.toFixed(2)}
           </p>
+        </div>
+
+        {/* Arrival date */}
+        <div className="sm:w-[140px] flex-shrink-0">
+          <p className="text-xs text-gray-500 dark:text-gray-400 sm:hidden">Arrival</p>
+          <p className="text-sm font-semibold text-gray-900 dark:text-white">
+            {new Date(trip.arrivalDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
+          </p>
+        </div>
+
+        {/* Vehicle + tags */}
+        <div className="flex items-center gap-2 sm:flex-1 min-w-0">
+          <p className="text-sm text-gray-600 dark:text-gray-400 truncate">{trip.vehicleName}</p>
+          {trip.refrigerated && (
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-blue-50 dark:bg-blue-950/30 text-blue-600 dark:text-blue-400 text-xs font-medium rounded-md flex-shrink-0">
+              Refrigerated
+            </span>
+          )}
         </div>
       </div>
     );
@@ -453,7 +423,7 @@ const SendParcel: React.FC = () => {
 
       {/* ─── STEP 1: Search Form ─── */}
       {step === 1 && (
-        <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-xl shadow-gray-200/50 dark:shadow-none border border-gray-200 dark:border-gray-800 p-8 animate-fade-in">
+        <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-xl shadow-gray-200/50 dark:shadow-none border-2 border-gray-500 dark:border-gray-600 p-8 animate-fade-in">
           <div className="mb-8">
             <h1 className="font-display text-2xl font-bold text-gray-900 dark:text-white">
               Where are you shipping?
@@ -464,7 +434,7 @@ const SendParcel: React.FC = () => {
           </div>
 
           {!googleLoaded && (
-            <div className="mb-6 p-4 bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 rounded-xl text-center text-sm text-amber-700 dark:text-amber-300">
+            <div className="mb-6 p-4 bg-amber-50 dark:bg-amber-950/20 border-2 border-amber-400 dark:border-amber-800 rounded-xl text-center text-sm text-amber-700 dark:text-amber-300">
               Loading Google Maps...
             </div>
           )}
@@ -488,7 +458,7 @@ const SendParcel: React.FC = () => {
                   className={inputClass}
                 />
                 {departureAddress && (
-                  <div className="mt-2 p-3 bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-800 rounded-xl">
+                  <div className="mt-2 p-3 bg-green-50 dark:bg-green-950/20 border-2 border-green-400 dark:border-green-800 rounded-xl">
                     <div className="flex justify-between items-start">
                       <div>
                         <p className="text-xs font-medium text-green-700 dark:text-green-300">&#10003; Confirmed</p>
@@ -518,7 +488,7 @@ const SendParcel: React.FC = () => {
                   className={inputClass}
                 />
                 {arrivalAddress && (
-                  <div className="mt-2 p-3 bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-800 rounded-xl">
+                  <div className="mt-2 p-3 bg-green-50 dark:bg-green-950/20 border-2 border-green-400 dark:border-green-800 rounded-xl">
                     <div className="flex justify-between items-start">
                       <div>
                         <p className="text-xs font-medium text-green-700 dark:text-green-300">&#10003; Confirmed</p>
@@ -563,7 +533,7 @@ const SendParcel: React.FC = () => {
                 </div>
               </div>
 
-              <div className="flex items-center gap-3 mt-4 p-4 rounded-xl bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700">
+              <div className="flex items-center gap-3 mt-4 p-4 rounded-xl bg-white dark:bg-gray-800/50 border border-gray-200 dark:border-gray-500">
                 <input
                   type="checkbox"
                   id="refrigerated"
@@ -580,7 +550,7 @@ const SendParcel: React.FC = () => {
             <button
               type="submit"
               disabled={isLoading || !departureAddress || !arrivalAddress || !googleLoaded}
-              className="w-full px-6 py-3.5 bg-primary-600 hover:bg-primary-700 text-white font-semibold rounded-xl shadow-lg shadow-primary-600/20 hover:shadow-xl hover:shadow-primary-600/30 transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none text-base"
+              className="w-full px-6 py-3.5 bg-primary-600 hover:bg-primary-700 text-white font-semibold rounded-xl  transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none text-base"
             >
               {isLoading ? (
                 <span className="flex items-center justify-center gap-2">
@@ -607,7 +577,7 @@ const SendParcel: React.FC = () => {
       {step === 2 && (
         <div className="animate-fade-in">
           {/* Summary bar */}
-          <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-5 mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="bg-white dark:bg-gray-900 rounded-2xl border-2 border-gray-500 dark:border-gray-600 p-5 mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div className="flex items-center gap-4 min-w-0">
               <button
                 onClick={handleBackToSearch}
@@ -634,12 +604,21 @@ const SendParcel: React.FC = () => {
             </div>
             <div className="flex items-center gap-4 flex-shrink-0 text-sm text-gray-500 dark:text-gray-400">
               <span>By {new Date(arrivalDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}</span>
+              {trips.length > 0 && (
+                <>
+                  <span className="w-px h-4 bg-gray-300 dark:bg-gray-600" />
+                  <span>~{(trips[0].scheduled && serverShipmentDTO ? serverShipmentDTO.distanceKm : trips[0].distanceKm).toFixed(0)} km</span>
+                  <span className="w-px h-4 bg-gray-300 dark:bg-gray-600" />
+                  <span>~{formatDuration(trips[0].scheduled && serverShipmentDTO ? serverShipmentDTO.duration : trips[0].duration)}</span>
+                </>
+              )}
+              <span className="w-px h-4 bg-gray-300 dark:bg-gray-600" />
               <span className="font-medium text-gray-900 dark:text-white">{trips.length} result{trips.length !== 1 ? 's' : ''}</span>
             </div>
           </div>
 
           {trips.length === 0 ? (
-            <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-12 text-center">
+            <div className="bg-white dark:bg-gray-900 rounded-2xl border-2 border-gray-500 dark:border-gray-600 p-12 text-center">
               <svg className="w-16 h-16 text-gray-300 dark:text-gray-600 mx-auto mb-4" fill="none" viewBox="0 0 24 24" strokeWidth={1} stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" />
               </svg>
@@ -660,10 +639,17 @@ const SendParcel: React.FC = () => {
                   <h2 className="font-display text-lg font-bold text-gray-900 dark:text-white mb-4">
                     Dedicated trips
                   </h2>
-                  <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+                  <div className="bg-white dark:bg-gray-900 rounded-2xl border-2 border-gray-500 dark:border-gray-600 overflow-hidden">
+                    {/* Column headers (desktop) */}
+                    <div className="hidden sm:flex items-center gap-0 px-4 py-3 bg-gray-100 dark:bg-gray-800/50 border-b-2 border-gray-300 dark:border-gray-600 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                      <div className="w-[40px]"></div>
+                      <div className="w-[120px]">Price</div>
+                      <div className="w-[140px]">Arrival</div>
+                      <div className="flex-1">Vehicle</div>
+                    </div>
                     {dedicatedTrips.map((trip) => {
                       const globalIndex = trips.indexOf(trip);
-                      return renderTripCard(trip, globalIndex);
+                      return renderTripRow(trip, globalIndex);
                     })}
                   </div>
                 </div>
@@ -672,7 +658,7 @@ const SendParcel: React.FC = () => {
               {/* ── Scheduled (shared) trips ── */}
               {scheduledTrips.length > 0 && (
                 <div className="mb-8">
-                  <div className="flex items-start gap-3 mb-4 p-4 bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 rounded-2xl">
+                  <div className="flex items-start gap-3 mb-4 p-4 bg-amber-50 dark:bg-amber-950/20 border-2 border-amber-400 dark:border-amber-800 rounded-2xl">
                     <svg className="w-6 h-6 text-amber-500 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v12m-3-2.818.879.659c1.171.879 3.07.879 4.242 0 1.172-.879 1.172-2.303 0-3.182C13.536 12.219 12.768 12 12 12c-.725 0-1.45-.22-2.003-.659-1.106-.879-1.106-2.303 0-3.182s2.9-.879 4.006 0l.415.33M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
                     </svg>
@@ -685,10 +671,17 @@ const SendParcel: React.FC = () => {
                       </p>
                     </div>
                   </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+                  <div className="bg-white dark:bg-gray-900 rounded-2xl border-2 border-gray-500 dark:border-gray-600 overflow-hidden">
+                    {/* Column headers (desktop) */}
+                    <div className="hidden sm:flex items-center gap-0 px-4 py-3 bg-gray-100 dark:bg-gray-800/50 border-b-2 border-gray-300 dark:border-gray-600 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                      <div className="w-[40px]"></div>
+                      <div className="w-[120px]">Price</div>
+                      <div className="w-[140px]">Arrival</div>
+                      <div className="flex-1">Vehicle</div>
+                    </div>
                     {scheduledTrips.map((trip) => {
                       const globalIndex = trips.indexOf(trip);
-                      return renderTripCard(trip, globalIndex);
+                      return renderTripRow(trip, globalIndex);
                     })}
                   </div>
                 </div>
@@ -696,7 +689,7 @@ const SendParcel: React.FC = () => {
 
               {/* Confirm button */}
               <div className="sticky bottom-4 z-10 mt-6">
-                <div className="bg-white/90 dark:bg-gray-900/90 backdrop-blur-lg rounded-2xl border border-gray-200 dark:border-gray-800 shadow-xl p-4 flex flex-col sm:flex-row items-center justify-between gap-4">
+                <div className="bg-white dark:bg-gray-900 backdrop-blur-lg rounded-2xl border-2 border-gray-500 dark:border-gray-600 p-4 flex flex-col sm:flex-row items-center justify-between gap-4">
                   <div className="text-sm text-gray-500 dark:text-gray-400">
                     {selectedTrip !== null ? (
                       <span>
@@ -711,7 +704,7 @@ const SendParcel: React.FC = () => {
                   <button
                     onClick={handleConfirm}
                     disabled={selectedTrip === null || isLoading}
-                    className="w-full sm:w-auto px-8 py-3 bg-green-600 hover:bg-green-700 text-white font-semibold rounded-xl shadow-lg shadow-green-600/20 hover:shadow-xl hover:shadow-green-600/30 transition-all disabled:opacity-40 disabled:cursor-not-allowed disabled:shadow-none"
+                    className="w-full sm:w-auto px-8 py-3 bg-green-600 hover:bg-green-700 text-white font-semibold rounded-xl  transition-all disabled:opacity-40 disabled:cursor-not-allowed disabled:shadow-none"
                   >
                     {isLoading ? (
                       <span className="flex items-center justify-center gap-2">
@@ -738,7 +731,7 @@ const SendParcel: React.FC = () => {
       {/* ─── Success Modal ─── */}
       {showSuccessModal && (
         <div className="fixed inset-0 bg-black/40 dark:bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-white dark:bg-gray-900 rounded-3xl border border-gray-200 dark:border-gray-800 shadow-2xl p-8 max-w-md w-full animate-fade-in text-center">
+          <div className="bg-white dark:bg-gray-900 rounded-3xl border-2 border-gray-500 dark:border-gray-600 p-8 max-w-md w-full animate-fade-in text-center">
             {/* Success animation */}
             <div className="mx-auto mb-6 w-20 h-20 rounded-full bg-green-100 dark:bg-green-950/30 flex items-center justify-center">
               <svg className="w-10 h-10 text-green-600 dark:text-green-400" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
@@ -755,7 +748,7 @@ const SendParcel: React.FC = () => {
 
             <button
               onClick={handleSuccessDismiss}
-              className="w-full px-6 py-3 bg-primary-600 hover:bg-primary-700 text-white font-semibold rounded-xl shadow-lg shadow-primary-600/20 hover:shadow-xl hover:shadow-primary-600/30 transition-all"
+              className="w-full px-6 py-3 bg-primary-600 hover:bg-primary-700 text-white font-semibold rounded-xl  transition-all"
             >
               Send Another Parcel
             </button>

@@ -18,7 +18,7 @@ export default function Header({ isLoggedIn, onLogout, unreadNotifications = 0 }
   };
 
   return (
-    <header className="sticky top-0 z-40 bg-white/80 dark:bg-gray-900/80 backdrop-blur-lg border-b border-gray-200 dark:border-gray-800">
+    <header className="sticky top-0 z-40 bg-white dark:bg-gray-900 backdrop-blur-lg border-b-2 border-gray-500 dark:border-gray-600">
       <div className="w-full px-4 sm:px-6 lg:px-8">
         <div className="flex flex-wrap justify-between items-center h-16">
           {/* Logo */}

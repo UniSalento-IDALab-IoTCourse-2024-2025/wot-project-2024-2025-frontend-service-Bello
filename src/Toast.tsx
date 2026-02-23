@@ -35,12 +35,12 @@ export function ToastContainer({ toasts, onDismiss }: { toasts: ToastData[]; onD
           key={toast.id}
           className="pointer-events-auto animate-fade-in"
         >
-          <div className={`flex items-start gap-3 p-4 rounded-2xl shadow-xl border backdrop-blur-lg ${
+          <div className={`flex items-start gap-3 p-4 rounded-2xl border-2 backdrop-blur-lg ${
             toast.type === 'error'
-              ? 'bg-red-50/95 dark:bg-red-950/90 border-red-200 dark:border-red-800'
+              ? 'bg-red-50/95 dark:bg-red-950/90 border-red-400 dark:border-red-800'
               : toast.type === 'warning'
-              ? 'bg-amber-50/95 dark:bg-amber-950/90 border-amber-200 dark:border-amber-800'
-              : 'bg-green-50/95 dark:bg-green-950/90 border-green-200 dark:border-green-800'
+              ? 'bg-amber-50/95 dark:bg-amber-950/90 border-amber-400 dark:border-amber-800'
+              : 'bg-green-50/95 dark:bg-green-950/90 border-green-400 dark:border-green-800'
           }`}>
             <div className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center ${
               toast.type === 'error'
