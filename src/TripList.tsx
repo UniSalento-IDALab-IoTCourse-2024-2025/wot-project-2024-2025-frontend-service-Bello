@@ -20,9 +20,7 @@ interface TripDTO {
   arrivalLatLng: { lat: number; lng: number };
   departureAddress: string;
   arrivalAddress: string;
-  remainingWidth: number;
-  remainingHeight: number;
-  remainingLength: number;
+  remainingVolume: number;
   remainingWeight: number;
   refrigerated: boolean;
 }

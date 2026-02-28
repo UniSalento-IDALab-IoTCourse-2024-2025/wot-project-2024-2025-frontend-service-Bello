@@ -25,9 +25,7 @@ interface TripDTO {
   departureLatLng: LatLng;
   arrivalLatLng: LatLng;
   refrigerated: boolean;
-  remainingWidth: number;
-  remainingHeight: number;
-  remainingLength: number;
+  remainingVolume: number;
   remainingWeight: number;
 }
 
@@ -174,6 +172,7 @@ const SendParcel: React.FC = () => {
     if (!departureAddress) { showToast('Please select a departure address from the suggestions.', 'warning'); return; }
     if (!arrivalAddress) { showToast('Please select an arrival address from the suggestions.', 'warning'); return; }
     if (!arrivalDate || !width || !height || !length || !weight) { showToast('All fields are required.', 'warning'); return; }
+    if ([width, height, length, weight].some(v => parseFloat(v) <= 0)) { showToast('Dimensions and weight must be greater than zero.', 'warning'); return; }
 
     const shipmentData: Partial<ShipmentDTO> = {
       departureAddress: departureAddress.formatted,
@@ -229,9 +228,7 @@ const SendParcel: React.FC = () => {
         departureLatLng: selectedTripData.departureLatLng,
         arrivalLatLng: selectedTripData.arrivalLatLng,
         refrigerated: selectedTripData.refrigerated,
-        remainingWidth: selectedTripData.remainingWidth,
-        remainingHeight: selectedTripData.remainingHeight,
-        remainingLength: selectedTripData.remainingLength,
+        remainingVolume: selectedTripData.remainingVolume,
         remainingWeight: selectedTripData.remainingWeight
       },
       shipment: {
@@ -265,8 +262,6 @@ const SendParcel: React.FC = () => {
   };
 
   const handleBackToSearch = () => {
-    departureAutocompleteRef.current = null;
-    arrivalAutocompleteRef.current = null;
     setStep(1);
     setTrips([]);
     setSelectedTrip(null);
@@ -423,7 +418,7 @@ const SendParcel: React.FC = () => {
 
       {/* ─── STEP 1: Search Form ─── */}
       {step === 1 && (
-        <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-xl shadow-gray-200/50 dark:shadow-none border-2 border-gray-500 dark:border-gray-600 p-8 animate-fade-in">
+        <div className="max-w-3xl mx-auto bg-white dark:bg-gray-900 rounded-2xl shadow-xl shadow-gray-200/50 dark:shadow-none border-2 border-gray-500 dark:border-gray-600 p-8 animate-fade-in">
           <div className="mb-8">
             <h1 className="font-display text-2xl font-bold text-gray-900 dark:text-white">
               Where are you shipping?
@@ -508,7 +503,8 @@ const SendParcel: React.FC = () => {
               <label htmlFor="arrivalDate" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
                 Arrival by
               </label>
-              <input type="date" id="arrivalDate" value={arrivalDate} onChange={(e) => setArrivalDate(e.target.value)} className={inputClass} />
+              <input type="date" id="arrivalDate" value={arrivalDate} onChange={(e) => setArrivalDate(e.target.value)} min={new Date().toISOString().split('T')[0]} className={inputClass} />
+              <p className="mt-1 text-xs text-gray-400 dark:text-gray-500">The latest date by which the parcel should arrive</p>
             </div>
 
             {/* Parcel Details */}
@@ -516,20 +512,32 @@ const SendParcel: React.FC = () => {
               <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">Parcel dimensions</p>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <div>
-                  <label htmlFor="width" className="block text-xs text-gray-500 dark:text-gray-400 mb-1">Width (cm)</label>
-                  <input type="number" id="width" placeholder="0" min="0" value={width} onChange={(e) => setWidth(e.target.value)} className={inputClass} />
+                  <label htmlFor="width" className="block text-xs text-gray-500 dark:text-gray-400 mb-1">Width</label>
+                  <div className="relative">
+                    <input type="number" id="width" placeholder="0" min="1" value={width} onChange={(e) => setWidth(e.target.value)} className={inputClass + " pr-10"} />
+                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-gray-400 dark:text-gray-500 pointer-events-none">cm</span>
+                  </div>
                 </div>
                 <div>
-                  <label htmlFor="height" className="block text-xs text-gray-500 dark:text-gray-400 mb-1">Height (cm)</label>
-                  <input type="number" id="height" placeholder="0" min="0" value={height} onChange={(e) => setHeight(e.target.value)} className={inputClass} />
+                  <label htmlFor="height" className="block text-xs text-gray-500 dark:text-gray-400 mb-1">Height</label>
+                  <div className="relative">
+                    <input type="number" id="height" placeholder="0" min="1" value={height} onChange={(e) => setHeight(e.target.value)} className={inputClass + " pr-10"} />
+                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-gray-400 dark:text-gray-500 pointer-events-none">cm</span>
+                  </div>
                 </div>
                 <div>
-                  <label htmlFor="length" className="block text-xs text-gray-500 dark:text-gray-400 mb-1">Length (cm)</label>
-                  <input type="number" id="length" placeholder="0" min="0" value={length} onChange={(e) => setLength(e.target.value)} className={inputClass} />
+                  <label htmlFor="length" className="block text-xs text-gray-500 dark:text-gray-400 mb-1">Length</label>
+                  <div className="relative">
+                    <input type="number" id="length" placeholder="0" min="1" value={length} onChange={(e) => setLength(e.target.value)} className={inputClass + " pr-10"} />
+                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-gray-400 dark:text-gray-500 pointer-events-none">cm</span>
+                  </div>
                 </div>
                 <div>
-                  <label htmlFor="weight" className="block text-xs text-gray-500 dark:text-gray-400 mb-1">Weight (kg)</label>
-                  <input type="number" id="weight" placeholder="0" min="0" value={weight} onChange={(e) => setWeight(e.target.value)} className={inputClass} />
+                  <label htmlFor="weight" className="block text-xs text-gray-500 dark:text-gray-400 mb-1">Weight</label>
+                  <div className="relative">
+                    <input type="number" id="weight" placeholder="0" min="1" value={weight} onChange={(e) => setWeight(e.target.value)} className={inputClass + " pr-10"} />
+                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-gray-400 dark:text-gray-500 pointer-events-none">kg</span>
+                  </div>
                 </div>
               </div>
 
@@ -581,12 +589,12 @@ const SendParcel: React.FC = () => {
             <div className="flex items-center gap-4 min-w-0">
               <button
                 onClick={handleBackToSearch}
-                className="flex-shrink-0 w-10 h-10 rounded-xl bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 flex items-center justify-center transition-colors"
-                title="Back to search"
+                className="flex-shrink-0 flex items-center gap-1.5 px-3 py-2 rounded-xl bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors text-sm font-medium text-gray-600 dark:text-gray-400"
               >
-                <svg className="w-5 h-5 text-gray-600 dark:text-gray-400" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 19.5 3 12m0 0 7.5-7.5M3 12h18" />
                 </svg>
+                Edit
               </button>
               <div className="flex items-center gap-2 min-w-0">
                 <div className="min-w-0">
@@ -602,17 +610,17 @@ const SendParcel: React.FC = () => {
                 </div>
               </div>
             </div>
-            <div className="flex items-center gap-4 flex-shrink-0 text-sm text-gray-500 dark:text-gray-400">
+            <div className="flex flex-wrap items-center gap-2 sm:gap-4 flex-shrink-0 text-sm text-gray-500 dark:text-gray-400">
               <span>By {new Date(arrivalDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}</span>
               {trips.length > 0 && (
                 <>
-                  <span className="w-px h-4 bg-gray-300 dark:bg-gray-600" />
+                  <span className="hidden sm:block w-px h-4 bg-gray-300 dark:bg-gray-600" />
                   <span>~{(trips[0].scheduled && serverShipmentDTO ? serverShipmentDTO.distanceKm : trips[0].distanceKm).toFixed(0)} km</span>
-                  <span className="w-px h-4 bg-gray-300 dark:bg-gray-600" />
+                  <span className="hidden sm:block w-px h-4 bg-gray-300 dark:bg-gray-600" />
                   <span>~{formatDuration(trips[0].scheduled && serverShipmentDTO ? serverShipmentDTO.duration : trips[0].duration)}</span>
                 </>
               )}
-              <span className="w-px h-4 bg-gray-300 dark:bg-gray-600" />
+              <span className="hidden sm:block w-px h-4 bg-gray-300 dark:bg-gray-600" />
               <span className="font-medium text-gray-900 dark:text-white">{trips.length} result{trips.length !== 1 ? 's' : ''}</span>
             </div>
           </div>

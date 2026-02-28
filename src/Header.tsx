@@ -1,4 +1,4 @@
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link, useLocation } from "react-router-dom";
 import { useTheme } from "./App";
 
 interface HeaderProps {
@@ -9,7 +9,9 @@ interface HeaderProps {
 
 export default function Header({ isLoggedIn, onLogout, unreadNotifications = 0 }: HeaderProps) {
   const navigate = useNavigate();
+  const location = useLocation();
   const userRole = localStorage.getItem("role");
+  const userEmail = localStorage.getItem("email");
   const { isDark, toggleTheme } = useTheme();
 
   const handleLogout = () => {
@@ -17,54 +19,61 @@ export default function Header({ isLoggedIn, onLogout, unreadNotifications = 0 }
     navigate("/");
   };
 
+  const navLinkClass = (path: string) =>
+    `px-3 py-2 text-sm font-medium rounded-lg transition-colors ${
+      location.pathname === path
+        ? "text-primary-600 dark:text-primary-400 bg-primary-50 dark:bg-primary-950/30"
+        : "text-gray-700 dark:text-gray-300 hover:text-primary-600 dark:hover:text-primary-400 hover:bg-gray-100 dark:hover:bg-gray-800"
+    }`;
+
   return (
     <header className="sticky top-0 z-40 bg-white dark:bg-gray-900 backdrop-blur-lg border-b-2 border-gray-500 dark:border-gray-600">
       <div className="w-full px-4 sm:px-6 lg:px-8">
         <div className="flex flex-wrap justify-between items-center h-16">
           {/* Logo */}
-          <a
-            href="/"
+          <Link
+            to="/"
             className="flex items-center gap-2 text-lg font-display font-bold text-gray-900 dark:text-white hover:text-primary-600 dark:hover:text-primary-400 transition-colors"
           >
             <svg className="w-7 h-7 text-primary-600 dark:text-primary-400" fill="none" viewBox="0 0 24 24" strokeWidth={1.8} stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 18.75a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m3 0h6m-9 0H3.375a1.125 1.125 0 0 1-1.125-1.125V14.25m17.25 4.5a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m3 0h1.125c.621 0 1.129-.504 1.09-1.124a17.902 17.902 0 0 0-3.213-9.193 2.056 2.056 0 0 0-1.58-.86H14.25M16.5 18.75h-2.25m0-11.177v-.958c0-.568-.422-1.048-.987-1.106a48.554 48.554 0 0 0-10.026 0 1.106 1.106 0 0 0-.987 1.106v7.635m12-6.677v6.677m0 4.5v-4.5m0 0h-12" />
             </svg>
-            Carrier Platform
-          </a>
+            ChillChain
+          </Link>
 
           {/* Right side: Nav + Theme Toggle */}
           <div className="flex items-center gap-3">
             <nav className="flex flex-wrap items-center gap-2">
               {!isLoggedIn ? (
                 <>
-                  <a
-                    href="/send-parcel"
+                  <Link
+                    to="/send-parcel"
                     className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-primary-600 dark:hover:text-primary-400 transition-colors"
                   >
                     Send a Parcel
-                  </a>
-                  <a
-                    href="/login"
+                  </Link>
+                  <Link
+                    to="/login"
                     className="px-4 py-2 text-sm font-medium text-white bg-primary-600 hover:bg-primary-700 rounded-lg shadow-sm transition-colors"
                   >
                     Login
-                  </a>
+                  </Link>
                 </>
               ) : (
                 <>
                   {userRole === "TECHNICIAN" ? (
                     <>
-                      <a
-                        href="/vehicle-monitor"
-                        className="px-3 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-primary-600 dark:hover:text-primary-400 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
+                      <Link
+                        to="/vehicle-monitor"
+                        className={navLinkClass("/vehicle-monitor")}
                       >
                         Monitor
-                      </a>
+                      </Link>
 
                       {/* Notification bell with badge */}
-                      <a
-                        href="/notifications"
-                        className="relative px-3 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-primary-600 dark:hover:text-primary-400 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors flex items-center gap-1.5"
+                      <Link
+                        to="/notifications"
+                        className={`relative ${navLinkClass("/notifications")} flex items-center gap-1.5`}
                       >
                         <div className="relative">
                           <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" strokeWidth={1.8} stroke="currentColor">
@@ -77,30 +86,36 @@ export default function Header({ isLoggedIn, onLogout, unreadNotifications = 0 }
                           )}
                         </div>
                         Notifications
-                      </a>
+                      </Link>
                     </>
                   ) : (
                     <>
-                      <a
-                        href="/add-vehicle"
-                        className="px-3 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-primary-600 dark:hover:text-primary-400 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
+                      <Link
+                        to="/add-vehicle"
+                        className={navLinkClass("/add-vehicle")}
                       >
                         Add Vehicle
-                      </a>
-                      <a
-                        href="/vehicle-list"
-                        className="px-3 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-primary-600 dark:hover:text-primary-400 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
+                      </Link>
+                      <Link
+                        to="/vehicle-list"
+                        className={navLinkClass("/vehicle-list")}
                       >
                         Vehicles
-                      </a>
-                      <a
-                        href="/trip-list"
-                        className="px-3 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-primary-600 dark:hover:text-primary-400 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
+                      </Link>
+                      <Link
+                        to="/trip-list"
+                        className={navLinkClass("/trip-list")}
                       >
                         Trips
-                      </a>
+                      </Link>
                     </>
                   )}
+                  {userEmail && (
+                    <span className="hidden sm:block px-2 py-1 text-xs text-gray-500 dark:text-gray-400 border border-gray-300 dark:border-gray-600 rounded-lg truncate max-w-[180px]">
+                      {userEmail}
+                    </span>
+                  )}
+                  <span className="w-px h-5 bg-gray-300 dark:bg-gray-600" />
                   <button
                     onClick={handleLogout}
                     className="px-4 py-2 text-sm font-medium text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/30 rounded-lg transition-colors"

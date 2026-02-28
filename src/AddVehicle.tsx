@@ -1,7 +1,9 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useToast, ToastContainer } from './Toast';
 
 const AddVehicle: React.FC = () => {
+  const navigate = useNavigate();
   const [vehicleName, setVehicleName] = useState('');
   const [length, setLength] = useState('');
   const [width, setWidth] = useState('');
@@ -18,6 +20,14 @@ const AddVehicle: React.FC = () => {
 
     if (!vehicleName.trim() || !length || !width || !height || !maxWeight || !pricePerKm) {
       showToast('All fields are required.', 'warning');
+      return;
+    }
+    if ([length, width, height, maxWeight].some(v => parseInt(v) <= 0)) {
+      showToast('Dimensions and weight must be greater than zero.', 'warning');
+      return;
+    }
+    if (parseFloat(pricePerKm) <= 0) {
+      showToast('Price per km must be greater than zero.', 'warning');
       return;
     }
 
@@ -73,7 +83,7 @@ const AddVehicle: React.FC = () => {
 
   return (
     <div className="w-full px-4 sm:px-6 lg:px-8 py-10">
-      <div className="bg-white dark:bg-gray-900 rounded-2xl border-2 border-gray-500 dark:border-gray-600 p-8">
+      <div className="max-w-3xl mx-auto bg-white dark:bg-gray-900 rounded-2xl border-2 border-gray-500 dark:border-gray-600 p-8">
         {/* Header */}
         <div className="mb-8">
           <div className="flex items-center gap-3 mb-2">
@@ -94,7 +104,7 @@ const AddVehicle: React.FC = () => {
         </div>
 
         <form onSubmit={handleSubmit} className="grid grid-cols-1 lg:grid-cols-2 gap-x-8 gap-y-5">
-          <div>
+          <div className="lg:col-span-2">
             <label htmlFor="vehicleName" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
               Vehicle Name
             </label>
@@ -116,66 +126,83 @@ const AddVehicle: React.FC = () => {
             <div className="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-3 gap-4">
               <div>
                 <label htmlFor="length" className="block text-xs text-gray-500 dark:text-gray-400 mb-1">
-                  Length (cm)
+                  Length
                 </label>
-                <input
-                  type="number"
-                  id="length"
-                  placeholder="0"
-                  step="0.01"
-                  min="0"
-                  value={length}
-                  onChange={(e) => setLength(e.target.value)}
-                  className={inputClass}
-                />
+                <div className="relative">
+                  <input
+                    type="number"
+                    id="length"
+                    placeholder="0"
+                    step="1"
+                    min="1"
+                    value={length}
+                    onChange={(e) => setLength(e.target.value)}
+                    className={inputClass + " pr-10"}
+                  />
+                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-gray-400 dark:text-gray-500 pointer-events-none">cm</span>
+                </div>
               </div>
               <div>
                 <label htmlFor="width" className="block text-xs text-gray-500 dark:text-gray-400 mb-1">
-                  Width (cm)
+                  Width
                 </label>
-                <input
-                  type="number"
-                  id="width"
-                  placeholder="0"
-                  step="0.01"
-                  min="0"
-                  value={width}
-                  onChange={(e) => setWidth(e.target.value)}
-                  className={inputClass}
-                />
+                <div className="relative">
+                  <input
+                    type="number"
+                    id="width"
+                    placeholder="0"
+                    step="1"
+                    min="1"
+                    value={width}
+                    onChange={(e) => setWidth(e.target.value)}
+                    className={inputClass + " pr-10"}
+                  />
+                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-gray-400 dark:text-gray-500 pointer-events-none">cm</span>
+                </div>
               </div>
               <div>
                 <label htmlFor="height" className="block text-xs text-gray-500 dark:text-gray-400 mb-1">
-                  Height (cm)
+                  Height
                 </label>
-                <input
-                  type="number"
-                  id="height"
-                  placeholder="0"
-                  step="0.01"
-                  min="0"
-                  value={height}
-                  onChange={(e) => setHeight(e.target.value)}
-                  className={inputClass}
-                />
+                <div className="relative">
+                  <input
+                    type="number"
+                    id="height"
+                    placeholder="0"
+                    step="1"
+                    min="1"
+                    value={height}
+                    onChange={(e) => setHeight(e.target.value)}
+                    className={inputClass + " pr-10"}
+                  />
+                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-gray-400 dark:text-gray-500 pointer-events-none">cm</span>
+                </div>
               </div>
             </div>
+            {length && width && height && parseInt(length) > 0 && parseInt(width) > 0 && parseInt(height) > 0 && (
+              <p className="mt-2 text-xs text-gray-400 dark:text-gray-500">
+                Cargo volume: <span className="font-medium text-gray-600 dark:text-gray-300">{((parseInt(length) * parseInt(width) * parseInt(height)) / 1000000).toFixed(2)} m³</span>
+              </p>
+            )}
           </div>
 
           <div>
             <label htmlFor="maxWeight" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
-              Maximum Weight (kg)
+              Maximum Weight
             </label>
-            <input
-              type="number"
-              id="maxWeight"
-              placeholder="0"
-              step="0.01"
-              min="0"
-              value={maxWeight}
-              onChange={(e) => setMaxWeight(e.target.value)}
-              className={inputClass}
-            />
+            <div className="relative">
+              <input
+                type="number"
+                id="maxWeight"
+                placeholder="0"
+                step="1"
+                min="1"
+                value={maxWeight}
+                onChange={(e) => setMaxWeight(e.target.value)}
+                className={inputClass + " pr-10"}
+              />
+              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-gray-400 dark:text-gray-500 pointer-events-none">kg</span>
+            </div>
           </div>
 
           {/* Refrigeration Toggle */}
@@ -194,18 +221,21 @@ const AddVehicle: React.FC = () => {
 
           <div>
             <label htmlFor="pricePerKm" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
-              Price per Km (€)
+              Price per Km
             </label>
-            <input
-              type="number"
-              id="pricePerKm"
-              placeholder="0.00"
-              step="0.01"
-              min="0"
-              value={pricePerKm}
-              onChange={(e) => setPricePerKm(e.target.value)}
-              className={inputClass}
-            />
+            <div className="relative">
+              <input
+                type="number"
+                id="pricePerKm"
+                placeholder="0.00"
+                step="0.01"
+                min="0.01"
+                value={pricePerKm}
+                onChange={(e) => setPricePerKm(e.target.value)}
+                className={inputClass + " pr-14"}
+              />
+              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-gray-400 dark:text-gray-500 pointer-events-none">€/km</span>
+            </div>
           </div>
 
           <button
@@ -242,12 +272,20 @@ const AddVehicle: React.FC = () => {
             </div>
             <h3 className="font-display text-2xl font-bold text-gray-900 dark:text-white mb-2">Vehicle Added!</h3>
             <p className="text-gray-500 dark:text-gray-400 mb-8">Your vehicle has been successfully registered in your fleet.</p>
-            <button
-              onClick={() => setShowSuccess(false)}
-              className="w-full px-6 py-3 bg-primary-600 hover:bg-primary-700 text-white font-semibold rounded-xl transition-all"
-            >
-              Got it
-            </button>
+            <div className="flex flex-col gap-3">
+              <button
+                onClick={() => setShowSuccess(false)}
+                className="w-full px-6 py-3 bg-primary-600 hover:bg-primary-700 text-white font-semibold rounded-xl transition-all"
+              >
+                Add Another Vehicle
+              </button>
+              <button
+                onClick={() => navigate('/vehicle-list')}
+                className="w-full px-6 py-3 text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 border-2 border-gray-500 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 font-medium rounded-xl transition-colors"
+              >
+                View My Vehicles
+              </button>
+            </div>
           </div>
         </div>
       )}
