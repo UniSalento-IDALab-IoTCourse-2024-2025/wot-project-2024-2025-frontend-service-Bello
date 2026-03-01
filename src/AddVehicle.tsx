@@ -15,6 +15,13 @@ const AddVehicle: React.FC = () => {
   const { toasts, showToast, dismissToast } = useToast();
   const [showSuccess, setShowSuccess] = useState(false);
 
+  const handleMeterInput = (value: string, setter: (v: string) => void) => {
+    // Allow empty, or numbers with max 2 decimal places
+    if (value === '' || /^\d*\.?\d{0,2}$/.test(value)) {
+      setter(value);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -22,8 +29,12 @@ const AddVehicle: React.FC = () => {
       showToast('All fields are required.', 'warning');
       return;
     }
-    if ([length, width, height, maxWeight].some(v => parseInt(v) <= 0)) {
-      showToast('Dimensions and weight must be greater than zero.', 'warning');
+    if ([length, width, height].some(v => parseFloat(v) <= 0)) {
+      showToast('Dimensions must be greater than zero.', 'warning');
+      return;
+    }
+    if (parseInt(maxWeight) <= 0) {
+      showToast('Weight must be greater than zero.', 'warning');
       return;
     }
     if (parseFloat(pricePerKm) <= 0) {
@@ -34,9 +45,9 @@ const AddVehicle: React.FC = () => {
     const vehicleData = {
       vehicleName: vehicleName,
       refrigerated: hasRefrigeration,
-      width: parseInt(width),
-      height: parseInt(height),
-      length: parseInt(length),
+      width: Math.round(parseFloat(width) * 100),
+      height: Math.round(parseFloat(height) * 100),
+      length: Math.round(parseFloat(length) * 100),
       maxWeight: parseInt(maxWeight),
       pricePerKm: parseFloat(pricePerKm)
     };
@@ -121,7 +132,7 @@ const AddVehicle: React.FC = () => {
           {/* Dimensions Grid */}
           <div className="lg:col-span-2">
             <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
-              Dimensions
+              Cargo Dimensions
             </p>
             <div className="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-3 gap-4">
               <div>
@@ -130,16 +141,15 @@ const AddVehicle: React.FC = () => {
                 </label>
                 <div className="relative">
                   <input
-                    type="number"
+                    type="text"
+                    inputMode="decimal"
                     id="length"
-                    placeholder="0"
-                    step="1"
-                    min="1"
+                    placeholder="4.00"
                     value={length}
-                    onChange={(e) => setLength(e.target.value)}
+                    onChange={(e) => handleMeterInput(e.target.value, setLength)}
                     className={inputClass + " pr-10"}
                   />
-                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-gray-400 dark:text-gray-500 pointer-events-none">cm</span>
+                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-gray-400 dark:text-gray-500 pointer-events-none">m</span>
                 </div>
               </div>
               <div>
@@ -148,16 +158,15 @@ const AddVehicle: React.FC = () => {
                 </label>
                 <div className="relative">
                   <input
-                    type="number"
+                    type="text"
+                    inputMode="decimal"
                     id="width"
-                    placeholder="0"
-                    step="1"
-                    min="1"
+                    placeholder="2.50"
                     value={width}
-                    onChange={(e) => setWidth(e.target.value)}
+                    onChange={(e) => handleMeterInput(e.target.value, setWidth)}
                     className={inputClass + " pr-10"}
                   />
-                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-gray-400 dark:text-gray-500 pointer-events-none">cm</span>
+                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-gray-400 dark:text-gray-500 pointer-events-none">m</span>
                 </div>
               </div>
               <div>
@@ -166,22 +175,21 @@ const AddVehicle: React.FC = () => {
                 </label>
                 <div className="relative">
                   <input
-                    type="number"
+                    type="text"
+                    inputMode="decimal"
                     id="height"
-                    placeholder="0"
-                    step="1"
-                    min="1"
+                    placeholder="2.20"
                     value={height}
-                    onChange={(e) => setHeight(e.target.value)}
+                    onChange={(e) => handleMeterInput(e.target.value, setHeight)}
                     className={inputClass + " pr-10"}
                   />
-                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-gray-400 dark:text-gray-500 pointer-events-none">cm</span>
+                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-gray-400 dark:text-gray-500 pointer-events-none">m</span>
                 </div>
               </div>
             </div>
-            {length && width && height && parseInt(length) > 0 && parseInt(width) > 0 && parseInt(height) > 0 && (
+            {length && width && height && parseFloat(length) > 0 && parseFloat(width) > 0 && parseFloat(height) > 0 && (
               <p className="mt-2 text-xs text-gray-400 dark:text-gray-500">
-                Cargo volume: <span className="font-medium text-gray-600 dark:text-gray-300">{((parseInt(length) * parseInt(width) * parseInt(height)) / 1000000).toFixed(2)} m³</span>
+                Cargo volume: <span className="font-medium text-gray-600 dark:text-gray-300">{(parseFloat(length) * parseFloat(width) * parseFloat(height)).toFixed(2)} m&sup3;</span>
               </p>
             )}
           </div>

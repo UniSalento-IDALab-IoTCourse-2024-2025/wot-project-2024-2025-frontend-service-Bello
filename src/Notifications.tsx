@@ -98,7 +98,7 @@ export default function Notifications({ onUnreadCountChange }: { onUnreadCountCh
             </svg>
           </div>
           <div>
-            <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Notifications</h1>
+            <h1 className="font-display text-2xl font-bold text-gray-900 dark:text-white">Notifications</h1>
             <p className="text-sm text-gray-500 dark:text-gray-400">
               {unreadCount > 0
                 ? `${unreadCount} unread alert${unreadCount > 1 ? "s" : ""}`
@@ -152,7 +152,12 @@ export default function Notifications({ onUnreadCountChange }: { onUnreadCountCh
           <svg className="w-12 h-12 mb-3 opacity-40" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" d="M14.857 17.082a23.848 23.848 0 0 0 5.454-1.31A8.967 8.967 0 0 1 18 9.75V9A6 6 0 0 0 6 9v.75a8.967 8.967 0 0 1-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 0 1-5.714 0m5.714 0a3 3 0 1 1-5.714 0" />
           </svg>
-          <p className="text-sm">No notifications</p>
+          <p className="text-sm font-medium text-gray-500 dark:text-gray-400">
+            {filter === "unread" ? "No unread notifications" : filter === "read" ? "No read notifications" : "No notifications"}
+          </p>
+          <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
+            {filter === "unread" ? "You're all caught up!" : filter === "read" ? "No notifications have been marked as read yet" : "Anomaly alerts will appear here"}
+          </p>
         </div>
       ) : (
         <div className="bg-white dark:bg-gray-900 rounded-2xl border-2 border-gray-500 dark:border-gray-600 overflow-hidden">
@@ -160,26 +165,25 @@ export default function Notifications({ onUnreadCountChange }: { onUnreadCountCh
           <div className="hidden md:block overflow-x-auto">
             <table className="w-full">
               <thead>
-                <tr className="border-b-2 border-gray-400 dark:border-gray-600/60">
-                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider w-10">Status</th>
-                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Vehicle</th>
-                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Date</th>
-                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Time</th>
-                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Alert</th>
-                  <th className="px-6 py-4 w-24"></th>
+                <tr className="border-b-2 border-gray-400 dark:border-gray-600 bg-gray-100 dark:bg-gray-800/30">
+                  <th className="text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider px-4 py-3.5 w-10">Status</th>
+                  <th className="text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider px-4 py-3.5">Vehicle</th>
+                  <th className="text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider px-4 py-3.5 whitespace-nowrap">Timestamp</th>
+                  <th className="text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider px-4 py-3.5">Alert</th>
+                  <th className="px-4 py-3.5 w-24"><span className="sr-only">Actions</span></th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-300 dark:divide-gray-600/40">
+              <tbody className="divide-y divide-gray-300 dark:divide-gray-600/60">
                 {filtered.map((n) => (
                   <tr
                     key={n.id}
-                    className={`transition-colors ${
+                    className={`group transition-colors ${
                       !n.read
                         ? "bg-red-50/50 dark:bg-red-950/10 hover:bg-red-50 dark:hover:bg-red-950/20"
-                        : "hover:bg-gray-50 dark:hover:bg-gray-800/40"
+                        : "hover:bg-gray-50/80 dark:hover:bg-gray-800/40"
                     }`}
                   >
-                    <td className="px-6 py-4">
+                    <td className="px-4 py-4">
                       {!n.read ? (
                         <span className="flex items-center justify-center w-6 h-6 rounded-full bg-red-100 dark:bg-red-900/40">
                           <span className="w-2 h-2 rounded-full bg-red-500" />
@@ -192,27 +196,25 @@ export default function Notifications({ onUnreadCountChange }: { onUnreadCountCh
                         </span>
                       )}
                     </td>
-                    <td className="px-6 py-4">
+                    <td className="px-4 py-4">
                       <span className={`text-sm font-semibold ${!n.read ? "text-gray-900 dark:text-white" : "text-gray-600 dark:text-gray-400"}`}>
                         {n.vehicleName}
                       </span>
                     </td>
-                    <td className="px-6 py-4">
-                      <span className={`text-sm font-mono tabular-nums ${!n.read ? "text-gray-900 dark:text-white font-medium" : "text-gray-600 dark:text-gray-400"}`}>
+                    <td className="px-4 py-4 whitespace-nowrap">
+                      <div className={`text-sm font-mono tabular-nums ${!n.read ? "text-gray-900 dark:text-white font-medium" : "text-gray-600 dark:text-gray-400"}`}>
                         {formatDate(n.timestamp)}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4">
-                      <span className={`text-sm font-mono tabular-nums ${!n.read ? "text-gray-900 dark:text-white font-bold" : "text-gray-600 dark:text-gray-400"}`}>
+                      </div>
+                      <div className={`text-xs font-mono tabular-nums ${!n.read ? "text-gray-600 dark:text-gray-300" : "text-gray-400 dark:text-gray-500"}`}>
                         {formatTime(n.timestamp)}
-                      </span>
+                      </div>
                     </td>
-                    <td className="px-6 py-4">
+                    <td className="px-4 py-4">
                       <span className={`text-sm ${!n.read ? "text-gray-800 dark:text-gray-200" : "text-gray-500 dark:text-gray-500"}`}>
                         {n.alertMessage}
                       </span>
                     </td>
-                    <td className="px-6 py-4 text-right">
+                    <td className="px-4 py-4 text-right">
                       {!n.read && (
                         <button
                           onClick={() => markAsRead(n.id)}

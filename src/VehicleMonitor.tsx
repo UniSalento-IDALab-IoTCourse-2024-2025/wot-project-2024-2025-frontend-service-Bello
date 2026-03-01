@@ -457,40 +457,35 @@ export default function VehicleMonitor() {
       <div className="min-h-[calc(100vh-64px)] bg-gray-200 dark:bg-gray-950">
 
         {/* ── Toolbar ────────────────────────────────────────────────── */}
-        <div className="sticky top-16 z-10 bg-white dark:bg-gray-900 border-b-2 border-gray-500 dark:border-gray-600 px-4 sm:px-6 py-3">
-          <div className="flex flex-wrap items-center gap-3">
-
-            {/* Back + Vehicle name */}
+        <div className="sticky top-16 z-10 bg-white dark:bg-gray-900 border-b-2 border-gray-500 dark:border-gray-600 px-4 sm:px-6">
+          {/* Row 1: Navigation + Vehicle + Refresh */}
+          <div className="flex items-center gap-3 py-3 border-b border-gray-200 dark:border-gray-700/50">
             <button
               onClick={() => { setSelectedVehicle(null); setTelemetry([]); }}
-              className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"
+              className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors text-sm font-medium text-gray-600 dark:text-gray-400"
             >
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 19.5 3 12m0 0 7.5-7.5M3 12h18" />
               </svg>
-              Back
+              Vehicles
             </button>
-
-            <div className="w-px h-6 bg-gray-400 dark:bg-gray-600" />
-
+            <div className="w-px h-5 bg-gray-300 dark:bg-gray-600" />
             <h1 className="text-sm font-bold text-gray-900 dark:text-white">{selectedVehicle.vehicleName}</h1>
-
-            <div className="w-px h-6 bg-gray-400 dark:bg-gray-600" />
-
-            {/* Refresh */}
+            <div className="flex-1" />
             <button
               onClick={fetchTelemetry}
               disabled={loadingTelemetry}
-              className="inline-flex items-center gap-2 px-3.5 py-1.5 text-xs font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 border-2 border-gray-500 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors disabled:opacity-50"
+              className="inline-flex items-center gap-2 px-4 py-2 text-xs font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 border-2 border-gray-500 dark:border-gray-600 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors disabled:opacity-50"
             >
               <svg className={`w-3.5 h-3.5 ${loadingTelemetry ? "animate-spin" : ""}`} fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182" />
               </svg>
               Refresh
             </button>
+          </div>
 
-            <div className="w-px h-6 bg-gray-400 dark:bg-gray-600" />
-
+          {/* Row 2: Time range + Category filters */}
+          <div className="flex flex-wrap items-center gap-3 py-3">
             {/* Date/time range */}
             <div className="flex items-center gap-2 flex-wrap">
               <span className="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">From</span>
@@ -570,7 +565,7 @@ export default function VehicleMonitor() {
               </div>
             </div>
 
-            <div className="w-px h-6 bg-gray-400 dark:bg-gray-600" />
+            <div className="w-px h-6 bg-gray-300 dark:bg-gray-600" />
 
             {/* Category filter */}
             <div className="flex gap-1.5">
@@ -659,40 +654,40 @@ export default function VehicleMonitor() {
           <div className="hidden md:block overflow-x-auto">
             <table className="w-full">
               <thead>
-                <tr className="border-b-2 border-gray-400 dark:border-gray-600/60">
-                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Vehicle</th>
-                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Dimensions</th>
-                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Max Capacity</th>
-                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Price/km</th>
-                  <th className="px-6 py-4"></th>
+                <tr className="border-b-2 border-gray-400 dark:border-gray-600 bg-gray-100 dark:bg-gray-800/30">
+                  <th className="text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider px-4 py-3.5">Vehicle</th>
+                  <th className="text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider px-4 py-3.5">Dimensions</th>
+                  <th className="text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider px-4 py-3.5 whitespace-nowrap">Max Capacity</th>
+                  <th className="text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider px-4 py-3.5">Price/km</th>
+                  <th className="px-4 py-3.5"><span className="sr-only">Open</span></th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-300 dark:divide-gray-600/40">
+              <tbody className="divide-y divide-gray-300 dark:divide-gray-600/60">
                 {refrigeratedVehicles.map((vehicle) => (
-                  <tr key={vehicle.id} onClick={() => setSelectedVehicle(vehicle)} className="group hover:bg-gray-50 dark:hover:bg-gray-800/40 transition-colors cursor-pointer">
-                    <td className="px-6 py-4">
+                  <tr key={vehicle.id} onClick={() => setSelectedVehicle(vehicle)} className="group hover:bg-gray-50/80 dark:hover:bg-gray-800/40 transition-colors cursor-pointer">
+                    <td className="px-4 py-4">
                       <div className="flex items-center gap-3">
                         <div className="w-9 h-9 rounded-lg bg-primary-50 dark:bg-primary-950/30 flex items-center justify-center flex-shrink-0">
                           <svg className="w-4.5 h-4.5 text-primary-600 dark:text-primary-400" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
                             <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 18.75a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m3 0h6m-9 0H3.375a1.125 1.125 0 0 1-1.125-1.125V14.25m17.25 4.5a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m3 0h1.125c.621 0 1.129-.504 1.09-1.124a17.902 17.902 0 0 0-3.213-9.193 2.056 2.056 0 0 0-1.58-.86H14.25M16.5 18.75h-2.25m0-11.177v-.958c0-.568-.422-1.048-.987-1.106a48.554 48.554 0 0 0-10.026 0 1.106 1.106 0 0 0-.987 1.106v7.635m12-6.677v6.677m0 4.5v-4.5m0 0h-12" />
                           </svg>
                         </div>
-                        <span className="font-semibold text-gray-900 dark:text-white">{vehicle.vehicleName}</span>
+                        <span className="text-sm font-semibold text-gray-900 dark:text-white">{vehicle.vehicleName}</span>
                       </div>
                     </td>
-                    <td className="px-6 py-4">
-                      <span className="text-sm text-gray-600 dark:text-gray-300 font-mono">{vehicle.length} × {vehicle.width} × {vehicle.height}</span>
+                    <td className="px-4 py-4 whitespace-nowrap">
+                      <span className="text-sm text-gray-600 dark:text-gray-300 font-mono">{vehicle.length} &times; {vehicle.width} &times; {vehicle.height}</span>
                       <span className="text-xs text-gray-400 dark:text-gray-500 ml-1">cm</span>
                     </td>
-                    <td className="px-6 py-4">
+                    <td className="px-4 py-4 whitespace-nowrap">
                       <span className="text-sm font-medium text-gray-900 dark:text-white">{vehicle.maxWeight}</span>
                       <span className="text-xs text-gray-400 dark:text-gray-500 ml-1">kg</span>
                     </td>
-                    <td className="px-6 py-4">
-                      <span className="text-sm font-semibold text-primary-600 dark:text-primary-400">€{vehicle.pricePerKm.toFixed(2)}</span>
+                    <td className="px-4 py-4 whitespace-nowrap">
+                      <span className="text-sm font-semibold text-primary-600 dark:text-primary-400">&euro;{vehicle.pricePerKm.toFixed(2)}</span>
                       <span className="text-xs text-gray-400 dark:text-gray-500 ml-0.5">/km</span>
                     </td>
-                    <td className="px-6 py-4 text-right">
+                    <td className="px-4 py-4 text-right">
                       <svg className="w-5 h-5 text-gray-300 dark:text-gray-600 group-hover:text-primary-500 transition-colors inline-block" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5" />
                       </svg>

@@ -4,6 +4,7 @@ import Header from "./Header";
 import AddVehicle from "./AddVehicle";
 import VehicleList from "./VehicleList";
 import TripList from "./TripList";
+import TripShipments from "./TripShipments";
 import LoginForm from "./LoginForm";
 import SendParcel from "./SendParcel";
 import HomePage from "./HomePage";
@@ -115,6 +116,7 @@ export default function App() {
               <Route path="/send-parcel" element={<SendParcel />} />
               <Route path="/vehicle-list" element={<VehicleList />} />
               <Route path="/trip-list" element={<TripList />} />
+              <Route path="/trip-list/:tripId/shipments" element={<TripShipments />} />
             </Routes>
           </main>
         </div>
