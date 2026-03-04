@@ -262,6 +262,8 @@ const SendParcel: React.FC = () => {
   };
 
   const handleBackToSearch = () => {
+    departureAutocompleteRef.current = null;
+    arrivalAutocompleteRef.current = null;
     setStep(1);
     setTrips([]);
     setSelectedTrip(null);
@@ -641,12 +643,22 @@ const SendParcel: React.FC = () => {
             </div>
           ) : (
             <>
-              {/* ── Dedicated trips ── */}
+              {/* ── New trips ── */}
               {dedicatedTrips.length > 0 && (
                 <div className="mb-8">
-                  <h2 className="font-display text-lg font-bold text-gray-900 dark:text-white mb-4">
-                    Dedicated trips
-                  </h2>
+                  <div className="flex items-start gap-3 mb-4 p-4 bg-primary-50 dark:bg-primary-950/20 border-2 border-primary-400 dark:border-primary-800 rounded-2xl">
+                    <svg className="w-6 h-6 text-primary-500 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v6m3-3H9m12 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+                    </svg>
+                    <div>
+                      <h2 className="font-display text-lg font-bold text-primary-900 dark:text-primary-200">
+                        New trips
+                      </h2>
+                      <p className="text-sm text-primary-700 dark:text-primary-300 mt-0.5">
+                        These trips will be created exclusively for your shipment. A carrier will pick up and deliver your parcel on a direct route.
+                      </p>
+                    </div>
+                  </div>
                   <div className="bg-white dark:bg-gray-900 rounded-2xl border-2 border-gray-500 dark:border-gray-600 overflow-hidden">
                     {/* Column headers (desktop) */}
                     <div className="hidden sm:flex items-center gap-0 px-4 py-3 bg-gray-100 dark:bg-gray-800/50 border-b-2 border-gray-300 dark:border-gray-600 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">

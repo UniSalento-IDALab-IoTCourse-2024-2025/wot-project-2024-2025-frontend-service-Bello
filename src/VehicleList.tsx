@@ -87,11 +87,13 @@ const VehicleList: React.FC = () => {
     setSelectedVehicle(null);
   };
 
+  const cmToM = (cm: number) => (cm / 100).toFixed(2);
+
   const formatVolume = (v: Vehicle) =>
-    ((v.length * v.width * v.height) / 1000000).toFixed(2);
+    ((v.length / 100) * (v.width / 100) * (v.height / 100)).toFixed(2);
 
   return (
-    <div className="w-full max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+    <div className="w-full px-4 sm:px-6 lg:px-8 py-10">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-8">
         <div className="flex items-center gap-3">
@@ -152,50 +154,50 @@ const VehicleList: React.FC = () => {
             <table className="w-full">
               <thead>
                 <tr className="border-b-2 border-gray-400 dark:border-gray-600 bg-gray-100 dark:bg-gray-800/30">
-                  <th className="text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider px-6 py-3.5">Vehicle</th>
-                  <th className="text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider px-6 py-3.5">Dimensions (L×W×H)</th>
-                  <th className="text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider px-6 py-3.5">Load capacity</th>
-                  <th className="text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider px-6 py-3.5">Price / km</th>
-                  <th className="text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider px-6 py-3.5">Features</th>
-                  <th className="px-6 py-3.5"><span className="sr-only">Actions</span></th>
+                  <th className="text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider px-4 py-3.5">Vehicle</th>
+                  <th className="text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider px-4 py-3.5 whitespace-nowrap">Dimensions (L&times;W&times;H)</th>
+                  <th className="text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider px-4 py-3.5 whitespace-nowrap">Max Weight</th>
+                  <th className="text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider px-4 py-3.5 whitespace-nowrap">Price / km</th>
+                  <th className="text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider px-4 py-3.5">Features</th>
+                  <th className="px-4 py-3.5"><span className="sr-only">Actions</span></th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-300 dark:divide-gray-600/60">
                 {vehicles.map((vehicle) => (
                   <tr key={vehicle.vehicleName} className="group hover:bg-gray-50/80 dark:hover:bg-gray-800/40 transition-colors">
                     {/* Name */}
-                    <td className="px-6 py-4">
+                    <td className="px-4 py-4">
                       <div className="flex items-center gap-3">
                         <div className="w-9 h-9 rounded-lg bg-primary-50 dark:bg-primary-950/30 flex items-center justify-center flex-shrink-0">
                           <svg className="w-4.5 h-4.5 text-primary-600 dark:text-primary-400" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
                             <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 18.75a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m3 0h6m-9 0H3.375a1.125 1.125 0 0 1-1.125-1.125V14.25m17.25 4.5a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m3 0h1.125c.621 0 1.129-.504 1.09-1.124a17.902 17.902 0 0 0-3.213-9.193 2.056 2.056 0 0 0-1.58-.86H14.25M16.5 18.75h-2.25m0-11.177v-.958c0-.568-.422-1.048-.987-1.106a48.554 48.554 0 0 0-10.026 0 1.106 1.106 0 0 0-.987 1.106v7.635m12-6.677v6.677m0 4.5v-4.5m0 0h-12" />
                           </svg>
                         </div>
-                        <span className="font-semibold text-gray-900 dark:text-white">{vehicle.vehicleName}</span>
+                        <span className="text-sm font-semibold text-gray-900 dark:text-white">{vehicle.vehicleName}</span>
                       </div>
                     </td>
                     {/* Dimensions */}
-                    <td className="px-6 py-4">
+                    <td className="px-4 py-4 whitespace-nowrap">
                       <div>
                         <span className="text-sm text-gray-600 dark:text-gray-300 font-mono">
-                          {vehicle.length} × {vehicle.width} × {vehicle.height}
+                          {cmToM(vehicle.length)} &times; {cmToM(vehicle.width)} &times; {cmToM(vehicle.height)}
                         </span>
-                        <span className="text-xs text-gray-400 dark:text-gray-500 ml-1">cm</span>
+                        <span className="text-xs text-gray-400 dark:text-gray-500 ml-1">m</span>
                       </div>
-                      <p className="text-[11px] text-gray-400 dark:text-gray-500 mt-0.5">{formatVolume(vehicle)} m³</p>
+                      <p className="text-[11px] text-gray-400 dark:text-gray-500 mt-0.5">{formatVolume(vehicle)} m&sup3;</p>
                     </td>
                     {/* Weight */}
-                    <td className="px-6 py-4">
+                    <td className="px-4 py-4 whitespace-nowrap">
                       <span className="text-sm font-medium text-gray-900 dark:text-white">{vehicle.maxWeight}</span>
                       <span className="text-xs text-gray-400 dark:text-gray-500 ml-1">kg</span>
                     </td>
                     {/* Price */}
-                    <td className="px-6 py-4">
-                      <span className="text-sm font-semibold text-primary-600 dark:text-primary-400">€{vehicle.pricePerKm.toFixed(2)}</span>
+                    <td className="px-4 py-4 whitespace-nowrap">
+                      <span className="text-sm font-semibold text-primary-600 dark:text-primary-400">&euro;{vehicle.pricePerKm.toFixed(2)}</span>
                       <span className="text-xs text-gray-400 dark:text-gray-500">/km</span>
                     </td>
                     {/* Features */}
-                    <td className="px-6 py-4">
+                    <td className="px-4 py-4">
                       {vehicle.refrigerated ? (
                         <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-blue-50 dark:bg-blue-950/30 text-blue-700 dark:text-blue-300 text-xs font-medium rounded-lg">
                           <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
@@ -204,11 +206,11 @@ const VehicleList: React.FC = () => {
                           Refrigerated
                         </span>
                       ) : (
-                        <span className="text-xs text-gray-300 dark:text-gray-600">—</span>
+                        <span className="text-xs text-gray-300 dark:text-gray-600">&mdash;</span>
                       )}
                     </td>
                     {/* Delete */}
-                    <td className="px-6 py-4 text-right">
+                    <td className="px-4 py-4 text-right">
                       <button
                         onClick={() => handleDeleteClick(vehicle)}
                         className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/20 rounded-lg transition-all opacity-40 group-hover:opacity-100 focus:opacity-100"
@@ -255,11 +257,11 @@ const VehicleList: React.FC = () => {
                 <div className="grid grid-cols-4 gap-2">
                   <div className="bg-white dark:bg-gray-800/50 rounded-lg p-2 text-center">
                     <p className="text-[10px] text-gray-400 dark:text-gray-500 uppercase">Size</p>
-                    <p className="text-xs font-medium text-gray-800 dark:text-gray-200 mt-0.5">{vehicle.length}×{vehicle.width}×{vehicle.height} <span className="text-[10px] text-gray-400">cm</span></p>
+                    <p className="text-xs font-medium text-gray-800 dark:text-gray-200 mt-0.5">{cmToM(vehicle.length)}&times;{cmToM(vehicle.width)}&times;{cmToM(vehicle.height)} <span className="text-[10px] text-gray-400">m</span></p>
                   </div>
                   <div className="bg-white dark:bg-gray-800/50 rounded-lg p-2 text-center">
                     <p className="text-[10px] text-gray-400 dark:text-gray-500 uppercase">Volume</p>
-                    <p className="text-xs font-medium text-gray-800 dark:text-gray-200 mt-0.5">{formatVolume(vehicle)} m³</p>
+                    <p className="text-xs font-medium text-gray-800 dark:text-gray-200 mt-0.5">{formatVolume(vehicle)} m&sup3;</p>
                   </div>
                   <div className="bg-white dark:bg-gray-800/50 rounded-lg p-2 text-center">
                     <p className="text-[10px] text-gray-400 dark:text-gray-500 uppercase">Weight</p>
@@ -267,7 +269,7 @@ const VehicleList: React.FC = () => {
                   </div>
                   <div className="bg-white dark:bg-gray-800/50 rounded-lg p-2 text-center">
                     <p className="text-[10px] text-gray-400 dark:text-gray-500 uppercase">Price</p>
-                    <p className="text-xs font-semibold text-primary-600 dark:text-primary-400 mt-0.5">€{vehicle.pricePerKm.toFixed(2)}/km</p>
+                    <p className="text-xs font-semibold text-primary-600 dark:text-primary-400 mt-0.5">&euro;{vehicle.pricePerKm.toFixed(2)}/km</p>
                   </div>
                 </div>
               </div>

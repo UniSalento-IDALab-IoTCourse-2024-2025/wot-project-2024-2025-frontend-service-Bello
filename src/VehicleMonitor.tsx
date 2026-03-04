@@ -676,8 +676,8 @@ export default function VehicleMonitor() {
                       </div>
                     </td>
                     <td className="px-4 py-4 whitespace-nowrap">
-                      <span className="text-sm text-gray-600 dark:text-gray-300 font-mono">{vehicle.length} &times; {vehicle.width} &times; {vehicle.height}</span>
-                      <span className="text-xs text-gray-400 dark:text-gray-500 ml-1">cm</span>
+                      <span className="text-sm text-gray-600 dark:text-gray-300 font-mono">{(vehicle.length / 100).toFixed(2)} &times; {(vehicle.width / 100).toFixed(2)} &times; {(vehicle.height / 100).toFixed(2)}</span>
+                      <span className="text-xs text-gray-400 dark:text-gray-500 ml-1">m</span>
                     </td>
                     <td className="px-4 py-4 whitespace-nowrap">
                       <span className="text-sm font-medium text-gray-900 dark:text-white">{vehicle.maxWeight}</span>
@@ -717,7 +717,7 @@ export default function VehicleMonitor() {
                 <div className="grid grid-cols-3 gap-2">
                   <div className="bg-white dark:bg-gray-800/50 rounded-lg p-2 text-center">
                     <p className="text-[10px] text-gray-400 dark:text-gray-500 uppercase">Size</p>
-                    <p className="text-xs font-medium text-gray-800 dark:text-gray-200 mt-0.5">{vehicle.length}×{vehicle.width}×{vehicle.height}</p>
+                    <p className="text-xs font-medium text-gray-800 dark:text-gray-200 mt-0.5">{(vehicle.length / 100).toFixed(2)}&times;{(vehicle.width / 100).toFixed(2)}&times;{(vehicle.height / 100).toFixed(2)} <span className="text-[10px] text-gray-400">m</span></p>
                   </div>
                   <div className="bg-white dark:bg-gray-800/50 rounded-lg p-2 text-center">
                     <p className="text-[10px] text-gray-400 dark:text-gray-500 uppercase">Max Capacity</p>

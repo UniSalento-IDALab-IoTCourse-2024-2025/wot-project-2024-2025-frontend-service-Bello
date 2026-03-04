@@ -84,10 +84,10 @@ export default function CarrierManagerLoginForm({ onLogin }: CarrierManagerLogin
               </svg>
             </div>
             <h2 className="font-display text-2xl font-bold text-gray-900 dark:text-white">
-              Carrier Manager Login
+              Sign In
             </h2>
             <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
-              Sign in to manage your fleet
+              Sign in to your ChillChain account
             </p>
           </div>
 
