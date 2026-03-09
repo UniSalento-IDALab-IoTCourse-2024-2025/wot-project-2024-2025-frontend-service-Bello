@@ -47,14 +47,14 @@ export default function Header({ isLoggedIn, onLogout, unreadNotifications = 0 }
               {!isLoggedIn ? (
                 <>
                   <Link
-                    to="/send-parcel"
-                    className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-primary-600 dark:hover:text-primary-400 transition-colors"
+                    to="/register"
+                    className={navLinkClass("/register")}
                   >
-                    Send a Parcel
+                    Register
                   </Link>
                   <Link
                     to="/login"
-                    className="px-4 py-2 text-sm font-medium text-white bg-primary-600 hover:bg-primary-700 rounded-lg shadow-sm transition-colors"
+                    className={navLinkClass("/login")}
                   >
                     Login
                   </Link>
@@ -86,6 +86,21 @@ export default function Header({ isLoggedIn, onLogout, unreadNotifications = 0 }
                           )}
                         </div>
                         Notifications
+                      </Link>
+                    </>
+                  ) : userRole === "CLIENT" ? (
+                    <>
+                      <Link
+                        to="/send-parcel"
+                        className={navLinkClass("/send-parcel")}
+                      >
+                        Send a Parcel
+                      </Link>
+                      <Link
+                        to="/my-shipments"
+                        className={navLinkClass("/my-shipments")}
+                      >
+                        My Shipments
                       </Link>
                     </>
                   ) : (

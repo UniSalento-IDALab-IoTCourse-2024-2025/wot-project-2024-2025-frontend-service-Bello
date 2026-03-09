@@ -189,9 +189,13 @@ const SendParcel: React.FC = () => {
 
     try {
       setIsLoading(true);
+      const token = localStorage.getItem('jwt');
       const response = await fetch('http://localhost:8081/api/carrier/retrieveTrips', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
         body: JSON.stringify(shipmentData)
       });
       const responseData = await response.json();
@@ -234,15 +238,20 @@ const SendParcel: React.FC = () => {
       shipment: {
         ...serverShipmentDTO,
         vehicleName: selectedTripData.vehicleName,
-        price: selectedTripData.price
+        price: selectedTripData.price,
+        idClient: localStorage.getItem("userId")
       }
     };
 
     try {
       setIsLoading(true);
+      const token = localStorage.getItem('jwt');
       const response = await fetch('http://localhost:8081/api/carrier/selectTrip', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
         body: JSON.stringify(selectedTripDTO)
       });
       const responseData = await response.json();

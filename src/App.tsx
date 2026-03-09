@@ -6,7 +6,9 @@ import VehicleList from "./VehicleList";
 import TripList from "./TripList";
 import TripShipments from "./TripShipments";
 import LoginForm from "./LoginForm";
+import Register from "./Register";
 import SendParcel from "./SendParcel";
+import ClientShipments from "./ClientShipments";
 import HomePage from "./HomePage";
 import VehicleMonitor from "./VehicleMonitor";
 import Notifications from "./Notifications";
@@ -92,6 +94,7 @@ export default function App() {
     localStorage.removeItem("userType");
     localStorage.removeItem("email");
     localStorage.removeItem("role");
+    localStorage.removeItem("userId");
     setIsLoggedIn(false);
     setUserRole(null);
     setUnreadNotifications(0);
@@ -110,10 +113,12 @@ export default function App() {
             <Routes>
               <Route path="/" element={<HomePage />} />
               <Route path="/login" element={<LoginForm onLogin={handleLogin} />} />
+              <Route path="/register" element={<Register />} />
               <Route path="/vehicle-monitor" element={<VehicleMonitor />} />
               <Route path="/notifications" element={<Notifications onUnreadCountChange={setUnreadNotifications} />} />
               <Route path="/add-vehicle" element={<AddVehicle />} />
               <Route path="/send-parcel" element={<SendParcel />} />
+              <Route path="/my-shipments" element={<ClientShipments />} />
               <Route path="/vehicle-list" element={<VehicleList />} />
               <Route path="/trip-list" element={<TripList />} />
               <Route path="/trip-list/:tripId/shipments" element={<TripShipments />} />

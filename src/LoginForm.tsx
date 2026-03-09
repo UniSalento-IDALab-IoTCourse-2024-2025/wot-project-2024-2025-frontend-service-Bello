@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { useToast, ToastContainer } from './Toast';
 
 interface CarrierManagerLoginFormProps {
@@ -37,17 +37,10 @@ export default function CarrierManagerLoginForm({ onLogin }: CarrierManagerLogin
         return;
       }
 
-      // DEBUG: stampa la risposta completa
-      console.log("Response data:", responseData);
-
-      // Estrai JWT e ruolo dalla risposta
       const authResponse = responseData.body;
       const jwt = authResponse?.jwt;
       const role = authResponse?.role;
-
-      console.log("Auth response:", authResponse);
-      console.log("JWT:", jwt);
-      console.log("Role:", role);
+      const userId = authResponse?.userId;
 
       if (!jwt) {
         showToast("Authentication failed: No token received");
@@ -56,11 +49,14 @@ export default function CarrierManagerLoginForm({ onLogin }: CarrierManagerLogin
 
       localStorage.setItem("email", email);
       localStorage.setItem("role", role || "CLIENT");
+      localStorage.setItem("userId", userId || "");
       onLogin(jwt);
       
       // Naviga al percorso giusto in base al ruolo
       if (role === "TECHNICIAN") {
         navigate("/vehicle-monitor");
+      } else if (role === "CLIENT") {
+        navigate("/send-parcel");
       } else {
         navigate("/trip-list");
       }
@@ -137,6 +133,14 @@ export default function CarrierManagerLoginForm({ onLogin }: CarrierManagerLogin
               )}
             </button>
           </form>
+
+          {/* Footer link */}
+          <p className="mt-6 text-center text-sm text-gray-500 dark:text-gray-400">
+            Don't have an account?{" "}
+            <Link to="/register" className="font-medium text-primary-600 dark:text-primary-400 hover:underline">
+              Create one
+            </Link>
+          </p>
         </div>
       </div>
       <ToastContainer toasts={toasts} onDismiss={dismissToast} />
