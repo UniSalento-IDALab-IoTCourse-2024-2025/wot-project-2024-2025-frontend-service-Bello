@@ -112,6 +112,12 @@ export default function Header({ isLoggedIn, onLogout, unreadNotifications = 0 }
                         Add Vehicle
                       </Link>
                       <Link
+                        to="/add-technician"
+                        className={navLinkClass("/add-technician")}
+                      >
+                        Add Technician
+                      </Link>
+                      <Link
                         to="/vehicle-list"
                         className={navLinkClass("/vehicle-list")}
                       >

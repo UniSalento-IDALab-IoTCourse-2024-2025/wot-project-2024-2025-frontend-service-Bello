@@ -2,6 +2,7 @@ import { useState, useEffect, createContext, useContext } from "react";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import Header from "./Header";
 import AddVehicle from "./AddVehicle";
+import AddTechnician from "./AddTechnician";
 import VehicleList from "./VehicleList";
 import TripList from "./TripList";
 import TripShipments from "./TripShipments";
@@ -117,6 +118,7 @@ export default function App() {
               <Route path="/vehicle-monitor" element={<VehicleMonitor />} />
               <Route path="/notifications" element={<Notifications onUnreadCountChange={setUnreadNotifications} />} />
               <Route path="/add-vehicle" element={<AddVehicle />} />
+              <Route path="/add-technician" element={<AddTechnician />} />
               <Route path="/send-parcel" element={<SendParcel />} />
               <Route path="/my-shipments" element={<ClientShipments />} />
               <Route path="/vehicle-list" element={<VehicleList />} />
