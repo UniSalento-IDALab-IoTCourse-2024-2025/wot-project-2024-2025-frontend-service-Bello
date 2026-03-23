@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo, useCallback, memo } from "react";
 import {
   AreaChart,
   Area,
@@ -129,6 +129,17 @@ function insertGapPoints<T extends { ts: number }>(
   return result;
 }
 
+/** Keep at most MAX points by picking evenly spaced samples (always keeps first & last). */
+const MAX_CHART_POINTS = 600;
+function downsample<T>(arr: T[], max: number = MAX_CHART_POINTS): T[] {
+  if (arr.length <= max) return arr;
+  const result: T[] = [arr[0]];
+  const step = (arr.length - 1) / (max - 1);
+  for (let i = 1; i < max - 1; i++) result.push(arr[Math.round(i * step)]);
+  result.push(arr[arr.length - 1]);
+  return result;
+}
+
 function formatTimeTick(ts: number, rangeMs: number): string {
   const d = new Date(ts);
   const rangeMinutes = rangeMs / 60000;
@@ -156,7 +167,7 @@ function formatTooltipTime(ts: number): string {
    MetricChart
    ═══════════════════════════════════════════════════════════════════════════ */
 
-function MetricChart({
+const MetricChart = memo(function MetricChart({
   data, metricKey, fromMs, toMs,
 }: {
   data: TelemetryPoint[];
@@ -173,15 +184,17 @@ function MetricChart({
       .filter((p) => p.ts >= fromMs && p.ts <= toMs)
       .sort((a, b) => a.ts - b.ts);
 
+    const sampled = downsample(sorted);
+
     // Auto-detect gap: if two points are >3× the median interval apart, break the line
-    if (sorted.length < 2) return sorted;
+    if (sampled.length < 2) return sampled;
     const intervals = [];
-    for (let i = 1; i < sorted.length; i++) intervals.push(sorted[i].ts - sorted[i - 1].ts);
+    for (let i = 1; i < sampled.length; i++) intervals.push(sampled[i].ts - sampled[i - 1].ts);
     intervals.sort((a, b) => a - b);
     const median = intervals[Math.floor(intervals.length / 2)];
     const autoGap = median * 3;
 
-    return insertGapPoints(sorted, autoGap, (ts) => ({ ts, value: null }));
+    return insertGapPoints(sampled, autoGap, (ts) => ({ ts, value: null }));
   }, [data, metricKey, fromMs, toMs]);
 
   const realValues = chartData.map((d) => d.value).filter((v): v is number => v !== null);
@@ -232,13 +245,13 @@ function MetricChart({
       )}
     </div>
   );
-}
+});
 
 /* ═══════════════════════════════════════════════════════════════════════════
    BooleanChart
    ═══════════════════════════════════════════════════════════════════════════ */
 
-function BooleanChart({
+const BooleanChart = memo(function BooleanChart({
   data, booleanKey, fromMs, toMs,
 }: {
   data: TelemetryPoint[];
@@ -255,14 +268,16 @@ function BooleanChart({
       .filter((p) => p.ts >= fromMs && p.ts <= toMs)
       .sort((a, b) => a.ts - b.ts);
 
-    if (sorted.length < 2) return sorted;
+    const sampled = downsample(sorted);
+
+    if (sampled.length < 2) return sampled;
     const intervals = [];
-    for (let i = 1; i < sorted.length; i++) intervals.push(sorted[i].ts - sorted[i - 1].ts);
+    for (let i = 1; i < sampled.length; i++) intervals.push(sampled[i].ts - sampled[i - 1].ts);
     intervals.sort((a, b) => a - b);
     const median = intervals[Math.floor(intervals.length / 2)];
     const autoGap = median * 3;
 
-    return insertGapPoints(sorted, autoGap, (ts) => ({ ts, value: null }));
+    return insertGapPoints(sampled, autoGap, (ts) => ({ ts, value: null }));
   }, [data, booleanKey, fromMs, toMs]);
 
   const realValues = chartData.filter((d) => d.value !== null);
@@ -313,7 +328,7 @@ function BooleanChart({
       )}
     </div>
   );
-}
+});
 
 /* ═══════════════════════════════════════════════════════════════════════════
    VehicleMonitor
@@ -326,9 +341,12 @@ export default function VehicleMonitor() {
   const [loadingVehicles, setLoadingVehicles] = useState(true);
   const [loadingTelemetry, setLoadingTelemetry] = useState(false);
 
-  // Time range as absolute from/to in ms
+  // Time range — "applied" values drive charts; "draft" values track input fields freely
   const [fromMs, setFromMs] = useState(() => Date.now() - 60 * 60 * 1000);
   const [toMs, setToMs] = useState(() => Date.now());
+  const [draftFromMs, setDraftFromMs] = useState(fromMs);
+  const [draftToMs, setDraftToMs] = useState(toMs);
+
   const [visibleCategories, setVisibleCategories] = useState<Set<string>>(
     new Set(["temperature", "pressure", "performance", "states"])
   );
@@ -352,14 +370,16 @@ export default function VehicleMonitor() {
     fetchVehicles();
   }, []);
 
-  // ── Fetch telemetry (manual) ──
-  const fetchTelemetry = useCallback(async () => {
+  // ── Fetch telemetry (with time range) ──
+  const fetchTelemetry = useCallback(async (from?: number, to?: number) => {
     if (!selectedVehicle) return;
     setLoadingTelemetry(true);
     try {
       const token = localStorage.getItem("jwt");
+      const f = from ?? fromMs;
+      const t = to ?? toMs;
       const res = await fetch(
-        `http://localhost:8081/api/carrier/telemetry/${selectedVehicle.vehicleName}`,
+        `http://localhost:8081/api/carrier/telemetry/${selectedVehicle.vehicleName}?from=${f}&to=${t}`,
         { headers: { Authorization: `Bearer ${token}` } }
       );
       const data = await res.json();
@@ -369,11 +389,12 @@ export default function VehicleMonitor() {
     } finally {
       setLoadingTelemetry(false);
     }
-  }, [selectedVehicle]);
+  }, [selectedVehicle, fromMs, toMs]);
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (selectedVehicle) fetchTelemetry();
-  }, [selectedVehicle, fetchTelemetry]);
+  }, [selectedVehicle]);
 
   // ── Derived ──
   const toggleCategory = (cat: string) => {
@@ -394,59 +415,43 @@ export default function VehicleMonitor() {
   /* ═══════════════════════════════════════════════════════════════════════
      Dashboard View
      ═══════════════════════════════════════════════════════════════════════ */
-  /* ── Helpers for date/time inputs ── */
-  const fromDate = new Date(fromMs);
-  const toDate = new Date(toMs);
-
+  /* ── Helpers for date/time inputs (purely local, no side effects) ── */
   const pad = (n: number) => String(n).padStart(2, "0");
 
-  const fromDateStr = `${fromDate.getFullYear()}-${pad(fromDate.getMonth() + 1)}-${pad(fromDate.getDate())}`;
-  const fromTimeStr = `${pad(fromDate.getHours())}:${pad(fromDate.getMinutes())}`;
-  const toDateStr = `${toDate.getFullYear()}-${pad(toDate.getMonth() + 1)}-${pad(toDate.getDate())}`;
-  const toTimeStr = `${pad(toDate.getHours())}:${pad(toDate.getMinutes())}`;
+  const initFrom = new Date(draftFromMs);
+  const initTo = new Date(draftToMs);
 
-  const updateFrom = (dateStr: string, timeStr: string) => {
+  const [fromDateStr, setFromDateStr] = useState(`${initFrom.getFullYear()}-${pad(initFrom.getMonth() + 1)}-${pad(initFrom.getDate())}`);
+  const [fromHourInput, setFromHourInput] = useState(pad(initFrom.getHours()));
+  const [fromMinInput, setFromMinInput] = useState(pad(initFrom.getMinutes()));
+  const [toDateStr, setToDateStr] = useState(`${initTo.getFullYear()}-${pad(initTo.getMonth() + 1)}-${pad(initTo.getDate())}`);
+  const [toHourInput, setToHourInput] = useState(pad(initTo.getHours()));
+  const [toMinInput, setToMinInput] = useState(pad(initTo.getMinutes()));
+
+  // Build draft ms from current input strings (called only on Apply)
+  const buildMs = (dateStr: string, hh: string, mm: string): number => {
     const [y, m, d] = dateStr.split("-").map(Number);
-    const [h, min] = timeStr.split(":").map(Number);
-    setFromMs(new Date(y, m - 1, d, h, min).getTime());
+    const h = parseInt(hh) || 0;
+    const min = parseInt(mm) || 0;
+    return new Date(y, m - 1, d, h, min).getTime();
   };
 
-  const updateTo = (dateStr: string, timeStr: string) => {
-    const [y, m, d] = dateStr.split("-").map(Number);
-    const [h, min] = timeStr.split(":").map(Number);
-    setToMs(new Date(y, m - 1, d, h, min).getTime());
+  const applyRange = () => {
+    const newFrom = buildMs(fromDateStr, fromHourInput, fromMinInput);
+    const newTo = buildMs(toDateStr, toHourInput, toMinInput);
+    setDraftFromMs(newFrom);
+    setDraftToMs(newTo);
+    setFromMs(newFrom);
+    setToMs(newTo);
+    fetchTelemetry(newFrom, newTo);
   };
 
-  const handleHourInput = (value: string, currentMin: string, setter: (date: string, time: string) => void, dateStr: string) => {
-    const clean = value.replace(/\D/g, "").slice(0, 2);
-    if (clean.length === 1 && parseInt(clean) > 2) return "";
-    if (clean.length === 2 && parseInt(clean) > 23) return clean[0];
-    if (clean.length === 2) {
-      setter(dateStr, `${clean}:${currentMin}`);
-    }
-    return clean;
-  };
+  // Detect if inputs differ from last applied values
+  const inputFromMs = buildMs(fromDateStr, fromHourInput, fromMinInput);
+  const inputToMs = buildMs(toDateStr, toHourInput, toMinInput);
+  const rangeChanged = inputFromMs !== fromMs || inputToMs !== toMs;
 
-  const handleMinuteInput = (value: string, currentHour: string, setter: (date: string, time: string) => void, dateStr: string) => {
-    const clean = value.replace(/\D/g, "").slice(0, 2);
-    if (clean.length === 1 && parseInt(clean) > 5) return "";
-    if (clean.length === 2 && parseInt(clean) > 59) return clean[0];
-    if (clean.length === 2) {
-      setter(dateStr, `${currentHour}:${clean}`);
-    }
-    return clean;
-  };
-
-  const [fromHourInput, setFromHourInput] = useState(pad(fromDate.getHours()));
-  const [fromMinInput, setFromMinInput] = useState(pad(fromDate.getMinutes()));
-  const [toHourInput, setToHourInput] = useState(pad(toDate.getHours()));
-  const [toMinInput, setToMinInput] = useState(pad(toDate.getMinutes()));
-
-  // Keep local inputs in sync
-  useEffect(() => { setFromHourInput(pad(new Date(fromMs).getHours())); setFromMinInput(pad(new Date(fromMs).getMinutes())); }, [fromMs]);
-  useEffect(() => { setToHourInput(pad(new Date(toMs).getHours())); setToMinInput(pad(new Date(toMs).getMinutes())); }, [toMs]);
-
-  const inputCls = "px-3 py-1.5 text-sm font-mono bg-white dark:bg-gray-900 border-2 border-gray-500 dark:border-gray-600 rounded-lg text-gray-900 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent [color-scheme:light] dark:[color-scheme:dark]";
+  const inputCls = "px-2 py-1 text-xs font-mono bg-white dark:bg-gray-900 border-2 border-gray-500 dark:border-gray-600 rounded-lg text-gray-900 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent [color-scheme:light] dark:[color-scheme:dark]";
 
   // Don't allow future dates (no sensor data exists)
   const now = new Date();
@@ -456,124 +461,99 @@ export default function VehicleMonitor() {
     return (
       <div className="min-h-[calc(100vh-64px)] bg-gray-200 dark:bg-gray-950">
 
-        {/* ── Toolbar ────────────────────────────────────────────────── */}
+        {/* ── Toolbar (single sticky bar) ────────────────────────────── */}
         <div className="sticky top-16 z-10 bg-white dark:bg-gray-900 border-b-2 border-gray-500 dark:border-gray-600 px-4 sm:px-6">
-          {/* Row 1: Navigation + Vehicle + Refresh */}
-          <div className="flex items-center gap-3 py-3 border-b border-gray-200 dark:border-gray-700/50">
+          <div className="flex items-center gap-2 py-2.5 overflow-x-auto">
+            {/* Back + Vehicle name */}
             <button
               onClick={() => { setSelectedVehicle(null); setTelemetry([]); }}
-              className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors text-sm font-medium text-gray-600 dark:text-gray-400"
+              className="flex items-center gap-1 px-2 py-1.5 rounded-lg bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors text-xs font-medium text-gray-600 dark:text-gray-400 flex-shrink-0"
             >
-              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 19.5 3 12m0 0 7.5-7.5M3 12h18" />
               </svg>
-              Vehicles
+              Back
             </button>
-            <div className="w-px h-5 bg-gray-300 dark:bg-gray-600" />
-            <h1 className="text-sm font-bold text-gray-900 dark:text-white">{selectedVehicle.vehicleName}</h1>
-            <div className="flex-1" />
-            <button
-              onClick={fetchTelemetry}
-              disabled={loadingTelemetry}
-              className="inline-flex items-center gap-2 px-4 py-2 text-xs font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 border-2 border-gray-500 dark:border-gray-600 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors disabled:opacity-50"
-            >
-              <svg className={`w-3.5 h-3.5 ${loadingTelemetry ? "animate-spin" : ""}`} fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182" />
-              </svg>
-              Refresh
-            </button>
-          </div>
+            <h1 className="text-xs font-bold text-gray-900 dark:text-white flex-shrink-0">{selectedVehicle.vehicleName}</h1>
 
-          {/* Row 2: Time range + Category filters */}
-          <div className="flex flex-wrap items-center gap-3 py-3">
+            <div className="w-px h-5 bg-gray-300 dark:bg-gray-600 flex-shrink-0" />
+
             {/* Date/time range */}
-            <div className="flex items-center gap-2 flex-wrap">
-              <span className="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">From</span>
+            <span className="text-[10px] font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 flex-shrink-0">From</span>
+            <input
+              type="date"
+              value={fromDateStr}
+              max={maxDateStr}
+              onChange={(e) => setFromDateStr(e.target.value)}
+              className={inputCls + " w-[130px] flex-shrink-0"}
+            />
+            <div className="flex items-center gap-0.5 flex-shrink-0">
               <input
-                type="date"
-                value={fromDateStr}
-                max={maxDateStr}
-                onChange={(e) => updateFrom(e.target.value, fromTimeStr)}
-                className={inputCls + " w-[150px]"}
+                type="text"
+                inputMode="numeric"
+                placeholder="HH"
+                maxLength={2}
+                value={fromHourInput}
+                onChange={(e) => setFromHourInput(e.target.value.replace(/\D/g, "").slice(0, 2))}
+                className={inputCls + " w-[40px] text-center"}
               />
-              <div className="flex items-center gap-1">
-                <input
-                  type="text"
-                  inputMode="numeric"
-                  placeholder="HH"
-                  maxLength={2}
-                  value={fromHourInput}
-                  onChange={(e) => {
-                    const v = handleHourInput(e.target.value, fromMinInput, updateFrom, fromDateStr);
-                    if (v !== undefined) setFromHourInput(v);
-                  }}
-                  onBlur={() => setFromHourInput(pad(new Date(fromMs).getHours()))}
-                  className={inputCls + " w-[52px] text-center"}
-                />
-                <span className="text-sm font-bold text-gray-500 dark:text-gray-400">:</span>
-                <input
-                  type="text"
-                  inputMode="numeric"
-                  placeholder="MM"
-                  maxLength={2}
-                  value={fromMinInput}
-                  onChange={(e) => {
-                    const v = handleMinuteInput(e.target.value, fromHourInput, updateFrom, fromDateStr);
-                    if (v !== undefined) setFromMinInput(v);
-                  }}
-                  onBlur={() => setFromMinInput(pad(new Date(fromMs).getMinutes()))}
-                  className={inputCls + " w-[52px] text-center"}
-                />
-              </div>
-
-              <span className="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 ml-2">To</span>
+              <span className="text-xs font-bold text-gray-500 dark:text-gray-400">:</span>
               <input
-                type="date"
-                value={toDateStr}
-                max={maxDateStr}
-                onChange={(e) => updateTo(e.target.value, toTimeStr)}
-                className={inputCls + " w-[150px]"}
+                type="text"
+                inputMode="numeric"
+                placeholder="MM"
+                maxLength={2}
+                value={fromMinInput}
+                onChange={(e) => setFromMinInput(e.target.value.replace(/\D/g, "").slice(0, 2))}
+                className={inputCls + " w-[40px] text-center"}
               />
-              <div className="flex items-center gap-1">
-                <input
-                  type="text"
-                  inputMode="numeric"
-                  placeholder="HH"
-                  maxLength={2}
-                  value={toHourInput}
-                  onChange={(e) => {
-                    const v = handleHourInput(e.target.value, toMinInput, updateTo, toDateStr);
-                    if (v !== undefined) setToHourInput(v);
-                  }}
-                  onBlur={() => setToHourInput(pad(new Date(toMs).getHours()))}
-                  className={inputCls + " w-[52px] text-center"}
-                />
-                <span className="text-sm font-bold text-gray-500 dark:text-gray-400">:</span>
-                <input
-                  type="text"
-                  inputMode="numeric"
-                  placeholder="MM"
-                  maxLength={2}
-                  value={toMinInput}
-                  onChange={(e) => {
-                    const v = handleMinuteInput(e.target.value, toHourInput, updateTo, toDateStr);
-                    if (v !== undefined) setToMinInput(v);
-                  }}
-                  onBlur={() => setToMinInput(pad(new Date(toMs).getMinutes()))}
-                  className={inputCls + " w-[52px] text-center"}
-                />
-              </div>
             </div>
 
-            <div className="w-px h-6 bg-gray-300 dark:bg-gray-600" />
+            <span className="text-[10px] font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 flex-shrink-0">To</span>
+            <input
+              type="date"
+              value={toDateStr}
+              max={maxDateStr}
+              onChange={(e) => setToDateStr(e.target.value)}
+              className={inputCls + " w-[130px] flex-shrink-0"}
+            />
+            <div className="flex items-center gap-0.5 flex-shrink-0">
+              <input
+                type="text"
+                inputMode="numeric"
+                placeholder="HH"
+                maxLength={2}
+                value={toHourInput}
+                onChange={(e) => setToHourInput(e.target.value.replace(/\D/g, "").slice(0, 2))}
+                className={inputCls + " w-[40px] text-center"}
+              />
+              <span className="text-xs font-bold text-gray-500 dark:text-gray-400">:</span>
+              <input
+                type="text"
+                inputMode="numeric"
+                placeholder="MM"
+                maxLength={2}
+                value={toMinInput}
+                onChange={(e) => setToMinInput(e.target.value.replace(/\D/g, "").slice(0, 2))}
+                className={inputCls + " w-[40px] text-center"}
+              />
+            </div>
 
-            {/* Category filter */}
-            <div className="flex gap-1.5">
+            {/* Apply range */}
+            <button
+              onClick={applyRange}
+              className="px-2.5 py-1 text-[10px] font-semibold rounded-lg bg-primary-600 hover:bg-primary-700 text-white transition-colors flex-shrink-0"
+            >
+              Apply
+            </button>
+
+            <div className="w-px h-5 bg-gray-300 dark:bg-gray-600 flex-shrink-0" />
+            <div className="flex gap-1 flex-shrink-0">
               {CATEGORIES.map((cat) => (
                 <button
                   key={cat.id}
                   onClick={() => toggleCategory(cat.id)}
-                  className={`px-3 py-1.5 text-xs font-medium rounded-lg border-2 transition-colors ${
+                  className={`px-2 py-1 text-[10px] font-medium rounded-lg border-2 transition-colors whitespace-nowrap ${
                     visibleCategories.has(cat.id)
                       ? "bg-white dark:bg-gray-800 border-gray-500 dark:border-gray-600 text-gray-900 dark:text-white"
                       : "bg-transparent border-gray-400 dark:border-gray-600 text-gray-400 dark:text-gray-500"
@@ -581,6 +561,18 @@ export default function VehicleMonitor() {
                 >{cat.icon} {cat.label}</button>
               ))}
             </div>
+
+            {/* Refresh (icon-only) */}
+            <button
+              onClick={() => fetchTelemetry()}
+              disabled={loadingTelemetry}
+              title="Refresh telemetry"
+              className="ml-auto p-1.5 rounded-lg text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors disabled:opacity-50 flex-shrink-0"
+            >
+              <svg className={`w-4 h-4 ${loadingTelemetry ? "animate-spin" : ""}`} fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182" />
+              </svg>
+            </button>
           </div>
         </div>
 

@@ -70,6 +70,10 @@ const SendParcel: React.FC = () => {
   const arrivalInputRef = useRef<HTMLInputElement>(null);
   const departureAutocompleteRef = useRef<any>(null);
   const arrivalAutocompleteRef = useRef<any>(null);
+  const sessionTokenRef = useRef<any>(null);
+
+  // Counter to trigger autocomplete re-initialization after reset
+  const [autocompleteInitCount, setAutocompleteInitCount] = useState(0);
 
   const [arrivalDate, setArrivalDate] = useState('');
   const [width, setWidth] = useState('');
@@ -89,6 +93,18 @@ const SendParcel: React.FC = () => {
   // Success modal
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [successMessage, setSuccessMessage] = useState('');
+
+  // Session token helpers
+  const getSessionToken = () => {
+    if (!sessionTokenRef.current && window.google?.maps?.places) {
+      sessionTokenRef.current = new window.google.maps.places.AutocompleteSessionToken();
+    }
+    return sessionTokenRef.current;
+  };
+
+  const resetSessionToken = () => {
+    sessionTokenRef.current = null;
+  };
 
   // Check if Google Maps is loaded
   useEffect(() => {
@@ -116,7 +132,8 @@ const SendParcel: React.FC = () => {
         {
           componentRestrictions: { country: ['it', 'de', 'fr', 'es', 'at', 'ch'] },
           types: ['address'],
-          fields: ['formatted_address', 'geometry', 'name']
+          fields: ['formatted_address', 'geometry', 'name'],
+          sessionToken: getSessionToken()
         }
       );
       departureAutocompleteRef.current.addListener('place_changed', () => {
@@ -127,6 +144,7 @@ const SendParcel: React.FC = () => {
           const formatted = place.formatted_address || place.name || '';
           setDepartureAddress({ formatted, lat, lng });
           setDepartureInputValue(formatted);
+          resetSessionToken();
         }
       });
     }
@@ -137,7 +155,8 @@ const SendParcel: React.FC = () => {
         {
           componentRestrictions: { country: ['it', 'de', 'fr', 'es', 'at', 'ch'] },
           types: ['address'],
-          fields: ['formatted_address', 'geometry', 'name']
+          fields: ['formatted_address', 'geometry', 'name'],
+          sessionToken: getSessionToken()
         }
       );
       arrivalAutocompleteRef.current.addListener('place_changed', () => {
@@ -148,10 +167,11 @@ const SendParcel: React.FC = () => {
           const formatted = place.formatted_address || place.name || '';
           setArrivalAddress({ formatted, lat, lng });
           setArrivalInputValue(formatted);
+          resetSessionToken();
         }
       });
     }
-  }, [googleLoaded, step]);
+  }, [googleLoaded, autocompleteInitCount]);
 
   const handleDepartureInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setDepartureInputValue(e.target.value);
@@ -273,10 +293,13 @@ const SendParcel: React.FC = () => {
   const handleBackToSearch = () => {
     departureAutocompleteRef.current = null;
     arrivalAutocompleteRef.current = null;
+    resetSessionToken();
     setStep(1);
     setTrips([]);
     setSelectedTrip(null);
     setServerShipmentDTO(null);
+    // Trigger re-initialization of autocomplete on the new DOM elements
+    setAutocompleteInitCount(c => c + 1);
   };
 
   const handleSuccessDismiss = () => {
@@ -295,10 +318,12 @@ const SendParcel: React.FC = () => {
     setTrips([]);
     setSelectedTrip(null);
     setServerShipmentDTO(null);
-    // Reset autocomplete refs so they get re-initialized when step 1 mounts
+    // Reset autocomplete refs so they get re-initialized
     departureAutocompleteRef.current = null;
     arrivalAutocompleteRef.current = null;
+    resetSessionToken();
     setStep(1);
+    setAutocompleteInitCount(c => c + 1);
   };
 
   const clearDepartureAddress = () => {
