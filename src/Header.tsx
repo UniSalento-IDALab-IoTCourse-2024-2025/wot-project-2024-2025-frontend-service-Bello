@@ -69,6 +69,12 @@ export default function Header({ isLoggedIn, onLogout, unreadNotifications = 0 }
                       >
                         Monitor
                       </Link>
+                      <Link
+                        to="/reports"
+                        className={navLinkClass("/reports")}
+                      >
+                        Reports
+                      </Link>
 
                       {/* Notification bell with badge */}
                       <Link

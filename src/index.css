@@ -13,6 +13,16 @@
     text-rendering: optimizeLegibility;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+
+    --tooltip-bg: #ffffff;
+    --tooltip-border: #9ca3af;
+    --tooltip-text: #111827;
+  }
+
+  .dark {
+    --tooltip-bg: #111827;
+    --tooltip-border: #374151;
+    --tooltip-text: #f9fafb;
   }
 
   body {

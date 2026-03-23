@@ -446,11 +446,6 @@ export default function VehicleMonitor() {
     fetchTelemetry(newFrom, newTo);
   };
 
-  // Detect if inputs differ from last applied values
-  const inputFromMs = buildMs(fromDateStr, fromHourInput, fromMinInput);
-  const inputToMs = buildMs(toDateStr, toHourInput, toMinInput);
-  const rangeChanged = inputFromMs !== fromMs || inputToMs !== toMs;
-
   const inputCls = "px-2 py-1 text-xs font-mono bg-white dark:bg-gray-900 border-2 border-gray-500 dark:border-gray-600 rounded-lg text-gray-900 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent [color-scheme:light] dark:[color-scheme:dark]";
 
   // Don't allow future dates (no sensor data exists)
@@ -571,6 +566,33 @@ export default function VehicleMonitor() {
             >
               <svg className={`w-4 h-4 ${loadingTelemetry ? "animate-spin" : ""}`} fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182" />
+              </svg>
+            </button>
+
+            {/* Export CSV (icon-only) */}
+            <button
+              onClick={() => {
+                if (telemetry.length === 0) return;
+                const headers = ["timestamp","tAmb","tSet","tCabMeas","tEvapSat","tCondSat","pSucBar","pDisBar","nCompHz","shK","pCompW","qEvapW","cop","doorOpen","defrostOn","valveOpen"];
+                const rows = telemetry
+                  .filter((p) => { const t = new Date(p.timestamp).getTime(); return t >= fromMs && t <= toMs; })
+                  .sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime())
+                  .map((p) => headers.map((h) => p[h as keyof TelemetryPoint]).join(","));
+                const csv = [headers.join(","), ...rows].join("\n");
+                const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement("a");
+                a.href = url;
+                a.download = `${selectedVehicle.vehicleName}_telemetry.csv`;
+                a.click();
+                URL.revokeObjectURL(url);
+              }}
+              disabled={telemetry.length === 0}
+              title="Export CSV"
+              className="p-1.5 rounded-lg text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors disabled:opacity-50 flex-shrink-0"
+            >
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3" />
               </svg>
             </button>
           </div>

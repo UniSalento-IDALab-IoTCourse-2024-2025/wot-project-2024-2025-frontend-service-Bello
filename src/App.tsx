@@ -13,6 +13,7 @@ import ClientShipments from "./ClientShipments";
 import HomePage from "./HomePage";
 import VehicleMonitor from "./VehicleMonitor";
 import Notifications from "./Notifications";
+import Reports from "./Reports";
 
 // Theme context
 interface ThemeContextType {
@@ -116,6 +117,7 @@ export default function App() {
               <Route path="/login" element={<LoginForm onLogin={handleLogin} />} />
               <Route path="/register" element={<Register />} />
               <Route path="/vehicle-monitor" element={<VehicleMonitor />} />
+              <Route path="/reports" element={<Reports />} />
               <Route path="/notifications" element={<Notifications onUnreadCountChange={setUnreadNotifications} />} />
               <Route path="/add-vehicle" element={<AddVehicle />} />
               <Route path="/add-technician" element={<AddTechnician />} />
