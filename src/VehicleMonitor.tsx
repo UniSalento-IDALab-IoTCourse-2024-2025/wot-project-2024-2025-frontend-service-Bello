@@ -448,9 +448,6 @@ export default function VehicleMonitor() {
 
   const inputCls = "px-2 py-1 text-xs font-mono bg-white dark:bg-gray-900 border-2 border-gray-500 dark:border-gray-600 rounded-lg text-gray-900 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent [color-scheme:light] dark:[color-scheme:dark]";
 
-  // Don't allow future dates (no sensor data exists)
-  const now = new Date();
-  const maxDateStr = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
 
   if (selectedVehicle) {
     return (
@@ -478,7 +475,6 @@ export default function VehicleMonitor() {
             <input
               type="date"
               value={fromDateStr}
-              max={maxDateStr}
               onChange={(e) => setFromDateStr(e.target.value)}
               className={inputCls + " w-[130px] flex-shrink-0"}
             />
@@ -508,7 +504,6 @@ export default function VehicleMonitor() {
             <input
               type="date"
               value={toDateStr}
-              max={maxDateStr}
               onChange={(e) => setToDateStr(e.target.value)}
               className={inputCls + " w-[130px] flex-shrink-0"}
             />
