@@ -67,7 +67,7 @@ export default function ClientShipments() {
   // -- Column resize --
   const tableRef = useRef<HTMLTableElement>(null);
 
-  const handleResizeMouseDown = useCallback((e: React.MouseEvent, colIndex: number) => {
+  const handleResizeMouseDown = useCallback((e: React.MouseEvent, _colIndex: number) => {
     e.preventDefault();
     const th = (e.target as HTMLElement).parentElement as HTMLTableCellElement;
     const startX = e.clientX;

@@ -23,6 +23,7 @@ interface ShipmentDTO {
   departureLatLng: { lat: number; lng: number };
   arrivalLatLng: { lat: number; lng: number };
   price: number;
+  idClient: string;
 }
 
 interface TripInfo {
@@ -149,7 +150,7 @@ const TripShipments: React.FC = () => {
   // -- Column resize --
   const tableRef = useRef<HTMLTableElement>(null);
 
-  const handleResizeMouseDown = useCallback((e: React.MouseEvent, colIndex: number) => {
+  const handleResizeMouseDown = useCallback((e: React.MouseEvent, _colIndex: number) => {
     e.preventDefault();
     const th = (e.target as HTMLElement).parentElement as HTMLTableCellElement;
     const startX = e.clientX;
@@ -257,6 +258,7 @@ const TripShipments: React.FC = () => {
                 <tr className="border-b-2 border-gray-400 dark:border-gray-600 bg-gray-100 dark:bg-gray-800/30">
                   {[
                     { label: 'Ref #', w: 90 },
+                    { label: 'Client', w: 200 },
                     { label: 'Departure', w: 260 },
                     { label: 'Destination', w: 260 },
                     { label: 'Dimensions', w: 140 },
@@ -287,6 +289,10 @@ const TripShipments: React.FC = () => {
                     {/* Ref # */}
                     <td className="px-4 py-4">
                       <span className="text-xs font-mono font-medium text-gray-500 dark:text-gray-400">{shortId(s.id)}</span>
+                    </td>
+                    {/* Client */}
+                    <td className="px-4 py-4">
+                      <span className="text-sm text-gray-600 dark:text-gray-300 truncate block">{s.idClient}</span>
                     </td>
                     {/* Departure */}
                     <td className="px-4 py-4">
@@ -355,6 +361,7 @@ const TripShipments: React.FC = () => {
                 {/* Actions */}
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-mono text-gray-400 dark:text-gray-500">{shortId(s.id)}</span>
+                  <span className="text-xs text-gray-500 dark:text-gray-400">{s.idClient}</span>
                   <button onClick={() => handleShowShipmentMap(s)} className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-medium text-primary-600 dark:text-primary-400 hover:bg-primary-50 dark:hover:bg-primary-950/20 rounded-lg transition-colors">
                     <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" d="M15 10.5a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" /><path strokeLinecap="round" strokeLinejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1 1 15 0Z" /></svg>
                     View on map

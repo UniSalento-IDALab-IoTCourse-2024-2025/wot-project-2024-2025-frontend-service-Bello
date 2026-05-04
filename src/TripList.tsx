@@ -2,11 +2,6 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useToast, ToastContainer } from './Toast';
 
-declare global {
-  interface Window {
-    google: any;
-  }
-}
 
 interface TripDTO {
   id: string;
@@ -157,7 +152,7 @@ const TripList: React.FC = () => {
   // -- Column resize --
   const tableRef = useRef<HTMLTableElement>(null);
 
-  const handleResizeMouseDown = useCallback((e: React.MouseEvent, colIndex: number) => {
+  const handleResizeMouseDown = useCallback((e: React.MouseEvent, _colIndex: number) => {
     e.preventDefault();
     const th = (e.target as HTMLElement).parentElement as HTMLTableCellElement;
     const startX = e.clientX;

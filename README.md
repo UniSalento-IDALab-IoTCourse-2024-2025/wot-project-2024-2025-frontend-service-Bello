@@ -12,6 +12,8 @@ The platform serves three user roles:
 
 The system is fully containerized via Docker Compose for local deployment, comprising a React frontend, a Spring Boot backend, a MongoDB database, a Mosquitto MQTT broker, and two Python-based microservices for telemetry simulation and anomaly detection.
 
+---
+
 ## B) System Architecture
 
 ```
@@ -56,6 +58,8 @@ The system is fully containerized via Docker Compose for local deployment, compr
 3. The **Spring Boot Backend** subscribes to both MQTT topics: it persists telemetry to MongoDB (with TTL indexing) and converts anomaly messages into notification documents.
 4. The **React Frontend** consumes the REST API for all user interactions: authentication, fleet management, trip search and booking, telemetry dashboards, and notification management.
 
+---
+
 ## C) Repository Links
 
 | Component | Repository |
@@ -65,6 +69,8 @@ The system is fully containerized via Docker Compose for local deployment, compr
 | **Backend Service** (Spring Boot) | [wot-project-2024-2025-spring-backend-service-Bello](https://github.com/UniSalento-IDALab-IoTCourse-2024-2025/wot-project-2024-2025-spring-backend-service-Bello) |
 | **FastAPI Services** (Streamer + Anomaly Detector) | [wot-project-2024-2025-fast-api-service-Bello](https://github.com/UniSalento-IDALab-IoTCourse-2024-2025/wot-project-2024-2025-fast-api-service-Bello) |
 
+---
+
 ## D) This Component: React Frontend
 
 ### Overview
@@ -73,14 +79,15 @@ The frontend is a single-page application built with React and TypeScript that p
 
 ### Tech Stack
 
-- **React 19** + **TypeScript** — component-based SPA
-- **Vite** — build tool and dev server
-- **Tailwind CSS** — utility-first styling with custom indigo primary palette
-- **Recharts** — telemetry data visualization (line charts, area charts)
-- **React Router v7** — client-side routing
-- **Leaflet** + **React Leaflet** — map rendering for trip route visualization
-- **Google Maps Places Autocomplete** — real-time address suggestions in the shipment booking flow
-- **Lucide React** — icon library
+| Layer | Technology |
+|-------|-----------|
+| Language & Framework | React 19 + TypeScript |
+| Build Tool | Vite 6 |
+| Styling | Tailwind CSS 3 — utility-first with custom indigo primary palette |
+| Charts | Recharts 3 — line/area charts for telemetry dashboards |
+| Routing | React Router v7 — client-side SPA routing |
+| Maps | Google Maps JavaScript API (Places + Geometry libraries) — address autocomplete and route polyline rendering |
+| Fonts | DM Sans (body) + Plus Jakarta Sans (headings) via Google Fonts |
 
 ### Application Structure
 
@@ -95,62 +102,110 @@ The app is organized around a role-based navigation system managed in `App.tsx`.
 | Home | `HomePage.tsx` | Landing page with platform overview and call-to-action |
 | Send a Parcel | `SendParcel.tsx` | Multi-step shipment booking flow: address input with Google Places Autocomplete, parcel dimensions, trip search results (dedicated vs shared), and booking confirmation |
 | Login | `LoginForm.tsx` | JWT authentication with role-based redirect |
+| Register | `Register.tsx` | New client account registration |
 
 **Admin (role: ADMIN):**
 
 | Page | Component | Description |
 |------|-----------|-------------|
 | Add Vehicle | `AddVehicle.tsx` | Vehicle registration form with cargo dimensions (input in meters, stored in cm), weight, price/km, and refrigeration toggle |
-| Vehicles | `VehicleList.tsx` | Fleet overview table with dimensions displayed in meters, volume in m³, and cascade delete |
-| Trips | `TripList.tsx` | Trip management with route map popup (Leaflet), expandable shipment details, and trip/shipment deletion |
+| Vehicles | `VehicleList.tsx` | Fleet overview table with dimensions in meters, volume in m³, and cascade delete |
+| Trips | `TripList.tsx` | Trip management with Google Maps route popup, shipment details per trip, and trip/shipment deletion |
+| Add Technician | `AddTechnician.tsx` | Admin form to create technician accounts |
 
 **Technician (role: TECHNICIAN):**
 
 | Page | Component | Description |
 |------|-----------|-------------|
 | Vehicle Monitor | `VehicleMonitor.tsx` | Real-time telemetry dashboard with configurable time range, category filters (temperatures, pressures, performance, states), and per-sensor line charts via Recharts |
-| Notifications | `Notifications.tsx` | Anomaly alert inbox with read/unread filtering, contextual empty states, and mark-as-read functionality |
+| Notifications | `Notifications.tsx` | Anomaly alert inbox with read/unread filtering and mark-as-read functionality |
+| Reports | `Reports.tsx` | Operating hours and anomaly alert reports per vehicle |
 
-### Key Design Decisions
+**Client (role: CLIENT):**
+
+| Page | Component | Description |
+|------|-----------|-------------|
+| My Shipments | `ClientShipments.tsx` | List of the client's booked shipments with status and trip details |
+
+---
+
+## E) Key Design Decisions
 
 **Unit conversion strategy:** Vehicle dimensions are input by users in meters (with max 2 decimal places enforced at input level), converted to centimeters on submit (`Math.round(value * 100)`), and stored as integers in the backend. Display always converts back to meters. Parcel dimensions remain in centimeters throughout the flow.
 
-**Google Places Autocomplete lifecycle:** Autocomplete instances are bound to DOM input elements. When navigating between the form step and results step in `SendParcel.tsx`, the autocomplete refs are reset so they are re-initialized on the new DOM elements.
+**Google Places Autocomplete lifecycle:** Autocomplete instances are bound to DOM input elements. When navigating between the form step and results step in `SendParcel.tsx`, the autocomplete refs are reset so they are re-initialized on the new DOM elements after render.
 
-**Theme system:** Dark/light mode is managed via React Context (`ThemeContext`) in `App.tsx`, persisted in `localStorage`, and applied as a `dark` class on `<html>` for Tailwind's dark mode variant.
+**Theme system:** Dark/light mode is managed via React Context (`ThemeContext`) in `App.tsx`, persisted in `localStorage`, and applied as a `dark` class on `<html>` for Tailwind's `dark:` variant.
 
-**Notification polling:** For the Technician role, unread notification count is polled every 30 seconds from `App.tsx` and displayed as a badge in the header.
+**Notification polling:** For the Technician role, the unread notification count is polled every 30 seconds from `App.tsx` and displayed as a badge in the header navigation.
 
-**Toast notification system:** A reusable toast system (`Toast.tsx`) provides feedback across all pages for success, error, and warning states.
+**Toast notification system:** A reusable `useToast` hook and `ToastContainer` (`Toast.tsx`) provide feedback across all pages for success, error, and warning states.
 
-### Fonts
+**Route map rendering:** Trip route popups in `TripList.tsx` use the Google Maps JavaScript API directly (loaded via `<script>` in `index.html`). The encoded polyline stored in the backend is decoded with `google.maps.geometry.encoding.decodePath` and rendered as a `Polyline` overlay.
 
-- **DM Sans** — body text (`font-sans`)
-- **Plus Jakarta Sans** — headings and titles (`font-display`)
+---
 
-Both loaded via Google Fonts in `index.html`.
+## F) Running the Service
 
-### Running
-
-As part of the Docker Compose stack:
+As part of the full Docker Compose stack:
 
 ```bash
 docker compose up -d
 ```
 
-For standalone development:
+For standalone development (requires the Spring Boot backend running on `http://localhost:8081`):
 
 ```bash
 npm install
 npm run dev
 ```
 
-The dev server starts on `http://localhost:5173` and expects the Spring Boot backend on `http://localhost:8081`.
+The dev server starts on `http://localhost:5173`.
 
-### Build
+### Docker Hub
+
+The production image is published on Docker Hub: `antoniobello09/chillchain-frontend`
+
+**Pull and run:**
+
+```bash
+docker pull antoniobello09/chillchain-frontend:latest
+docker run -d -p 5173:80 --name chillchain-frontend antoniobello09/chillchain-frontend:latest
+```
+
+The app will be available at `http://localhost:5173`.
+
+**Build and push** (requires the API key at build time, as it is embedded in the JS bundle by Vite):
+
+```bash
+docker build --build-arg VITE_GOOGLE_MAPS_API_KEY=<your-api-key> -t antoniobello09/chillchain-frontend:latest .
+docker push antoniobello09/chillchain-frontend:latest
+```
+
+---
+
+## G) Build
 
 ```bash
 npm run build
 ```
 
 Produces a static bundle in `dist/` ready for deployment behind any web server (Nginx, etc.).
+
+---
+
+## H) Environment Variables
+
+Create a `.env` file in the project root before running or building:
+
+| Variable | Description |
+|----------|-------------|
+| `VITE_GOOGLE_MAPS_API_KEY` | Google Maps Platform API key — required for address autocomplete (Places API) and route map rendering (Maps JavaScript API + Geometry library) |
+
+Example `.env`:
+
+```
+VITE_GOOGLE_MAPS_API_KEY=your_api_key_here
+```
+
+The key is injected into `index.html` at build time via Vite's `%VITE_*%` syntax. The `.env` file is excluded from version control (see `.gitignore`). A `.env.example` template should be committed in its place.

@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useRef } from "react";
 import OperatingHoursReport, { OperatingHoursReportHandle } from "./OperatingHoursReport";
 import CumulativeHoursReport, { CumulativeHoursReportHandle } from "./CumulativeHoursReport";
 import AlertReport, { AlertReportHandle } from "./AlertReport";
@@ -6,15 +6,8 @@ import AlertReport, { AlertReportHandle } from "./AlertReport";
 type ReportType = "operating-hours" | "cumulative-hours" | "alerts";
 type AlertGranularity = "year" | "month" | "day";
 
-interface Vehicle {
-  id: string;
-  vehicleName: string;
-  refrigerated: boolean;
-}
-
 export default function Reports() {
   const [reportType, setReportType] = useState<ReportType>("operating-hours");
-  const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [year, setYear] = useState(new Date().getFullYear());
   const [month, setMonth] = useState(new Date().getMonth() + 1);
   const [bins, setBins] = useState(5);
@@ -43,18 +36,6 @@ export default function Reports() {
     else if (reportType === "alerts") alertRef.current?.exportCsv();
   };
 
-  useEffect(() => {
-    const token = localStorage.getItem("jwt");
-    fetch("http://localhost:8081/api/carrier/vehicles", {
-      headers: { Authorization: `Bearer ${token}` },
-    })
-      .then((r) => r.json())
-      .then((data) => {
-        const vehs: Vehicle[] = (data.body || []).filter((v: Vehicle) => v.refrigerated);
-        setVehicles(vehs);
-      })
-      .catch((e) => console.error("Error fetching vehicles:", e));
-  }, []);
 
   const currentYear = new Date().getFullYear();
   const years = Array.from({ length: 5 }, (_, i) => currentYear - i);

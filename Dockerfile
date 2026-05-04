@@ -1,20 +1,14 @@
-# Usa un'immagine di base per Node.js
-FROM node:16
-
-# Imposta la cartella di lavoro all'interno del container
+FROM node:20-alpine AS builder
 WORKDIR /app
-
-# Copia il package.json e package-lock.json (se presente)
 COPY package*.json ./
-
-# Installa le dipendenze
-RUN npm install
-
-# Copia tutti i file del progetto nella cartella di lavoro del container
+RUN npm ci
 COPY . .
+ARG VITE_GOOGLE_MAPS_API_KEY
+ENV VITE_GOOGLE_MAPS_API_KEY=$VITE_GOOGLE_MAPS_API_KEY
+RUN npm run build
 
-# Espone la porta su cui il server di sviluppo React (Vite) ascolta (di solito 5173 per Vite)
-EXPOSE 5173
-
-# Comando per avviare il server di sviluppo Vite
-CMD ["npm", "run", "dev"]
+FROM nginx:alpine
+COPY --from=builder /app/dist /usr/share/nginx/html
+COPY nginx.conf /etc/nginx/conf.d/default.conf
+EXPOSE 80
+CMD ["nginx", "-g", "daemon off;"]
