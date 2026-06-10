@@ -94,69 +94,62 @@ The app is organized around a role-based navigation system managed in `App.tsx`.
 | My Shipments | `ClientShipments.tsx` | List of the client's booked shipments with status and trip details |
 
 ---
-
-
 ## E) Running the Service
-
-As part of the full Docker Compose stack:
-
+ 
+### Full stack via Docker Compose (recommended)
+ 
+The recommended way to run the entire ChillChain platform is via the unified `docker-compose.yml` available in the [presentation repository](https://github.com/UniSalento-IDALab-IoTCourse-2024-2025/wot-project-2024-2025-presentation-Bello):
+ 
 ```bash
+docker login   # required — images are private
+docker compose pull
 docker compose up -d
 ```
-
-For standalone development (requires the Spring Boot backend running on `http://localhost:8081`):
-
+ 
+The app will be available at `http://localhost:5173`.
+ 
+### Standalone development
+ 
+Requires the Spring Boot backend running on `http://localhost:8081`:
+ 
 ```bash
 npm install
 npm run dev
 ```
-
+ 
 The dev server starts on `http://localhost:5173`.
-
+ 
 ### Docker Hub
-
+ 
 The production image is published on Docker Hub: `antoniobello09/chillchain-frontend`
-
+ 
+The Google Maps API key is already embedded in the image — no additional configuration required.
+ 
 **Pull and run:**
-
+ 
 ```bash
+docker login
 docker pull antoniobello09/chillchain-frontend:latest
 docker run -d -p 5173:80 --name chillchain-frontend antoniobello09/chillchain-frontend:latest
 ```
-
-The app will be available at `http://localhost:5173`.
-
-**Build and push** (requires the API key at build time, as it is embedded in the JS bundle by Vite):
-
+ 
+**Build and push** (required when updating the API key or the source code):
+ 
 ```bash
-docker build --build-arg VITE_GOOGLE_MAPS_API_KEY=<your-api-key> -t antoniobello09/chillchain-frontend:latest .
+docker build \
+  --build-arg VITE_GOOGLE_MAPS_API_KEY=<your-api-key> \
+  -t antoniobello09/chillchain-frontend:latest .
 docker push antoniobello09/chillchain-frontend:latest
 ```
-
+ 
 ---
-
+ 
 ## G) Build
-
+ 
 ```bash
 npm run build
 ```
-
+ 
 Produces a static bundle in `dist/` ready for deployment behind any web server (Nginx, etc.).
-
+ 
 ---
-
-## H) Environment Variables
-
-Create a `.env` file in the project root before running or building:
-
-| Variable | Description |
-|----------|-------------|
-| `VITE_GOOGLE_MAPS_API_KEY` | Google Maps Platform API key — required for address autocomplete (Places API) and route map rendering (Maps JavaScript API + Geometry library) |
-
-Example `.env`:
-
-```
-VITE_GOOGLE_MAPS_API_KEY=your_api_key_here
-```
-
-The key is injected into `index.html` at build time via Vite's `%VITE_*%` syntax. The `.env` file is excluded from version control (see `.gitignore`). A `.env.example` template should be committed in its place.
