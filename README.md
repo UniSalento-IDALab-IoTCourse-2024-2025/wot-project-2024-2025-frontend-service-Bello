@@ -101,7 +101,6 @@ The app is organized around a role-based navigation system managed in `App.tsx`.
 The recommended way to run the entire ChillChain platform is via the unified `docker-compose.yml` available in the [presentation repository](https://github.com/UniSalento-IDALab-IoTCourse-2024-2025/wot-project-2024-2025-presentation-Bello):
  
 ```bash
-docker login   # required — images are private
 docker compose pull
 docker compose up -d
 ```
