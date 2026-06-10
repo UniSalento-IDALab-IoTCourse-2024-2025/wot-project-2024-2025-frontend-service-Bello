@@ -128,7 +128,6 @@ The Google Maps API key is already embedded in the image — no additional confi
 **Pull and run:**
  
 ```bash
-docker login
 docker pull antoniobello09/chillchain-frontend:latest
 docker run -d -p 5173:80 --name chillchain-frontend antoniobello09/chillchain-frontend:latest
 ```
